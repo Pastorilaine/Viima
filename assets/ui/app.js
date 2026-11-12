@@ -156,6 +156,20 @@ tabsListEl.addEventListener('click', (e) => {
     }
 });
 
+// Middle click closes a tab (mousedown preventDefault stops the autoscroll cursor).
+tabsListEl.addEventListener('mousedown', (e) => {
+    if (e.button === 1) e.preventDefault();
+});
+tabsListEl.addEventListener('auxclick', (e) => {
+    if (e.button !== 1) return;
+    const tabEl = e.target.closest('.tab');
+    const id = tabEl && Number(tabEl.dataset.tabId);
+    if (id) {
+        e.preventDefault();
+        sendIpc('close_tab', { id });
+    }
+});
+
 tabsListEl.addEventListener('wheel', (e) => {
     if (e.deltaY !== 0) {
         tabsListEl.scrollLeft += e.deltaY;
@@ -382,7 +396,13 @@ window.addEventListener('blur', () => {
 
 // Keyboard shortcuts inside Chrome UI
 window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'Tab') {
+        e.preventDefault();
+        sendIpc('shortcut', { key: e.shiftKey ? 'prev_tab' : 'next_tab' });
+    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && e.shiftKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        sendIpc('shortcut', { key: 'reopen_tab' });
+    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         const key = e.key.toLowerCase();
         if (key === 't') {
             e.preventDefault();

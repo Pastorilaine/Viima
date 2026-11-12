@@ -89,12 +89,31 @@ impl Default for BrowserSettings {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SessionTab {
+    pub url: String,
+    pub title: String,
+}
+
+/// Open tabs + window state, restored on next launch.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Session {
+    pub tabs: Vec<SessionTab>,
+    pub active_index: usize,
+    pub maximized: bool,
+    /// Logical (width, height) of the last non-maximized window.
+    pub window_size: Option<(f64, f64)>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BrowserData {
     pub bookmarks: Vec<Bookmark>,
     pub history: Vec<HistoryItem>,
     pub settings: BrowserSettings,
+    pub session: Session,
 }
 
 impl Default for BrowserData {
@@ -147,6 +166,7 @@ impl Default for BrowserData {
             bookmarks: default_bookmarks,
             history: Vec::new(),
             settings: BrowserSettings::default(),
+            session: Session::default(),
         }
     }
 }
@@ -365,6 +385,26 @@ impl StorageManager {
         self.save();
     }
 
+    /// Page titles usually arrive after the load-finished event that created the history entry.
+    pub fn update_history_title(&mut self, url: &str, title: &str) {
+        let title = title.trim();
+        if let Some(first) = self.data.history.first_mut()
+            && !title.is_empty()
+            && first.title != title
+            && urls_match(&first.url, url)
+        {
+            first.title = title.to_string();
+            self.save();
+        }
+    }
+
+    pub fn set_session(&mut self, session: Session) {
+        if self.data.session != session {
+            self.data.session = session;
+            self.save();
+        }
+    }
+
     pub fn toggle_bookmark(&mut self, title: String, url: String) -> bool {
         if url.is_empty() || is_internal_url(&url) || url == "about:blank" {
             return false;
@@ -524,6 +564,45 @@ mod tests {
         let removed = storage.toggle_bookmark("Test Site".into(), "https://test-site.fi/".into());
         assert!(!removed);
         assert!(!storage.is_bookmarked(url));
+    }
+
+    #[test]
+    fn test_session_roundtrip_and_old_files_load() {
+        // Files written before sessions existed must still load.
+        let old: BrowserData = serde_json::from_str(r#"{"bookmarks":[],"history":[]}"#).unwrap();
+        assert!(old.session.tabs.is_empty());
+
+        let data = BrowserData {
+            session: Session {
+                tabs: vec![SessionTab {
+                    url: "https://yle.fi/".into(),
+                    title: "Yle".into(),
+                }],
+                active_index: 0,
+                maximized: true,
+                window_size: Some((1280.0, 820.0)),
+            },
+            ..BrowserData::default()
+        };
+        let back: BrowserData =
+            serde_json::from_str(&serde_json::to_string(&data).unwrap()).unwrap();
+        assert_eq!(back.session, data.session);
+    }
+
+    #[test]
+    fn test_history_title_updates_latest_entry() {
+        let mut storage = StorageManager {
+            data: BrowserData::default(),
+            last_error: None,
+            tx: None,
+            writer: None,
+            write_error: Default::default(),
+        };
+        storage.add_history_entry("Vanha otsikko".into(), "https://yle.fi/".into());
+        storage.update_history_title("https://yle.fi", "Yle");
+        assert_eq!(storage.data.history[0].title, "Yle");
+        storage.update_history_title("https://other.fi/", "Muu");
+        assert_eq!(storage.data.history[0].title, "Yle");
     }
 
     #[test]

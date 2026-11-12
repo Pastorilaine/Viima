@@ -5,6 +5,21 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.3.3] - 2026-11-12
+
+### 🌟 Uutta (Added)
+- **Istunnon palautus**: Avoimet välilehdet, aktiivinen välilehti, ikkunan koko ja maksimointi palautuvat seuraavalla käynnistyksellä. Istunto tallentuu jatkuvasti, joten se säilyy myös kaatumisen jälkeen.
+- **Kevyt palautus**: Taustalla olevat palautetut välilehdet ladataan vasta kun niihin siirrytään, joten iso istunto ei hidasta käynnistystä.
+- **Pikanäppäimet**: `Ctrl+Shift+T` avaa viimeksi suljetun välilehden, `Ctrl+Tab` / `Ctrl+Shift+Tab` vaihtaa välilehteä.
+- **Hiiren keskinappi** sulkee välilehden.
+
+### ⚡ Korjaukset (Fixed)
+- Historiaan tallentui usein edellisen sivun otsikko, koska otsikko saapuu vasta latauksen jälkeen. Nyt uusin merkintä päivittyy oikeaan otsikkoon.
+- Ikkunan otsikko näytti sisäsivuilla "Viima" kahdesti.
+- Automaattisen päivityksen palautus: jos uuden version kopiointi epäonnistui kesken, rikkinäinen tiedosto jäi paikalleen. Nyt vanha versio palautetaan aina.
+
+---
+
 ## [0.3.2] - 2026-11-12
 
 ### ⚡ Korjaukset (Fixed)

@@ -313,8 +313,9 @@ pub fn handle_cli_args() -> bool {
                 .arg(&self_exe)
                 .spawn();
         } else {
-            // Rollback if copy failed
-            if backup.exists() && !target.exists() {
+            // Rollback: a failed copy can leave a truncated target behind, so drop it first.
+            if backup.exists() {
+                let _ = fs::remove_file(&target);
                 let _ = fs::rename(&backup, &target);
             }
             crate::win_platform::show_message_box(

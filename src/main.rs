@@ -135,6 +135,12 @@ fn main() {
                 AppEvent::IpcCloseActiveTab => {
                     browser.close_active_tab();
                 }
+                AppEvent::IpcReopenTab => {
+                    browser.reopen_closed_tab();
+                }
+                AppEvent::IpcCycleTab(forward) => {
+                    browser.cycle_tab(forward);
+                }
                 AppEvent::IpcFocusOmnibox => {
                     browser.focus_omnibox();
                 }

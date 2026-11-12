@@ -1,5 +1,5 @@
 use crate::adblock::AdBlocker;
-use crate::storage::{StorageManager, is_internal_url};
+use crate::storage::{Session, SessionTab, StorageManager, is_internal_url};
 use crate::tab::Tab;
 use crate::updater::{self, UiUpdateStatus, UpdateInfo};
 use crate::url_resolver::UrlResolver;
@@ -39,6 +39,15 @@ fn web_theme(dark: bool) -> Theme {
     if dark { Theme::Dark } else { Theme::Light }
 }
 
+/// Internal pages already end their titles with "Viima"; don't append it twice.
+fn window_title(page_title: &str) -> String {
+    if page_title.ends_with("Viima") {
+        page_title.to_string()
+    } else {
+        format!("{page_title} - Viima")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     // IPC commands from Top Bar UI
@@ -63,6 +72,9 @@ pub enum AppEvent {
     IpcSetUpdateUrl(String),
     IpcRequestInitialState,
     IpcCloseActiveTab,
+    IpcReopenTab,
+    /// true = next tab, false = previous
+    IpcCycleTab(bool),
     IpcFocusOmnibox,
     IpcMinimize,
     IpcMaximize,
@@ -127,11 +139,15 @@ struct InternalPageState<'a> {
 }
 
 // Keyboard shortcuts for focused web pages (the chrome webview never sees those key events).
-// Only Ctrl+T/W/L/H: reload and history navigation are already handled natively by WebView2.
+// Reload and history navigation are already handled natively by WebView2.
 const SHORTCUT_SCRIPT: &str = r#"
 window.addEventListener('keydown', function (e) {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || !window.ipc) return;
-    const key = { t: 'new_tab', w: 'close_tab', l: 'focus_omnibox', h: 'history' }[(e.key || '').toLowerCase()];
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || !window.ipc) return;
+    const k = (e.key || '').toLowerCase();
+    let key = null;
+    if (k === 'tab') key = e.shiftKey ? 'prev_tab' : 'next_tab';
+    else if (e.shiftKey) key = k === 't' ? 'reopen_tab' : null;
+    else key = { t: 'new_tab', w: 'close_tab', l: 'focus_omnibox', h: 'history' }[k];
     if (!key) return;
     e.preventDefault();
     window.ipc.postMessage(JSON.stringify({ action: 'shortcut', key }));
@@ -152,6 +168,21 @@ pub struct BrowserApp {
     update_status: UiUpdateStatus,
     pending_update: Option<UpdateInfo>,
     staged_update_path: Option<PathBuf>,
+    /// Recently closed tabs for Ctrl+Shift+T (newest last).
+    closed_tabs: Vec<SessionTab>,
+}
+
+const MAX_CLOSED_TABS: usize = 25;
+
+impl InternalPage {
+    fn browser_url(self) -> &'static str {
+        match self {
+            InternalPage::NewTab => "browser://newtab",
+            InternalPage::History => "browser://history",
+            InternalPage::Bookmarks => "browser://bookmarks",
+            InternalPage::Settings => "browser://settings",
+        }
+    }
 }
 
 impl BrowserApp {
@@ -160,6 +191,7 @@ impl BrowserApp {
         let dark = storage.data.settings.dark_mode;
         DARK_MODE.store(dark, Ordering::Relaxed);
         let adblock_enabled = Rc::new(Cell::new(storage.data.settings.adblock_enabled));
+        Self::restore_window_state(&window, &storage.data.session);
         let scale_factor = window.scale_factor();
         let window_size = window.inner_size();
         let logical_size = window_size.to_logical::<f64>(scale_factor);
@@ -208,11 +240,17 @@ impl BrowserApp {
             update_status: UiUpdateStatus::default(),
             pending_update: None,
             staged_update_path: None,
+            closed_tabs: Vec::new(),
         };
 
-        // Open initial tab (defaults to Google search & start page)
-        let home_page = app.storage.data.settings.home_page.clone();
-        app.new_tab(Some(home_page));
+        // Restore last session's tabs; fall back to the home page.
+        let session = app.storage.data.session.clone();
+        if session.tabs.is_empty() {
+            let home_page = app.storage.data.settings.home_page.clone();
+            app.new_tab(Some(home_page));
+        } else {
+            app.restore_tabs(session);
+        }
 
         // Silent background update check after startup settles
         if app.storage.data.settings.auto_update_enabled {
@@ -357,6 +395,9 @@ impl BrowserApp {
                         Some("close_tab") => AppEvent::IpcCloseActiveTab,
                         Some("focus_omnibox") => AppEvent::IpcFocusOmnibox,
                         Some("history") => AppEvent::IpcNavigate("browser://history".into()),
+                        Some("reopen_tab") => AppEvent::IpcReopenTab,
+                        Some("next_tab") => AppEvent::IpcCycleTab(true),
+                        Some("prev_tab") => AppEvent::IpcCycleTab(false),
                         _ => return,
                     };
                     let _ = proxy.send_event(event);
@@ -530,65 +571,55 @@ impl BrowserApp {
 
         let init_adblock = self.adblock_enabled.get();
         let webview = self.create_tab_webview(id, &resolved);
-        let tab = Tab::new(id, webview, resolved, init_adblock);
+        let tab = Tab::new(
+            id,
+            Some(webview),
+            resolved,
+            "Uusi välilehti".to_string(),
+            init_adblock,
+        );
         tab.focus();
         self.tabs.push(tab);
         self.active_tab_id = id;
 
         self.sync_window_title();
         self.update_ui();
+        self.sync_session();
     }
 
-    pub fn close_tab(&mut self, id: usize) {
-        if self.tabs.len() <= 1 {
-            // If only one tab left, reset it to newtab instead of closing window
-            if let Some(tab) = self.tabs.first_mut()
-                && Self::internal_page_kind(&tab.url) != Some(InternalPage::NewTab)
-            {
-                tab.load_url("browser://newtab");
-                tab.url = "browser://newtab".to_string();
-                tab.title = "Uusi välilehti".to_string();
-                tab.is_loading = true;
-                self.sync_window_title();
-                self.update_ui();
-            }
-            return;
+    /// Recreates last session's tabs. Only the active one gets a webview now; the rest load
+    /// when first opened, so a big session doesn't spawn dozens of renderers at startup.
+    fn restore_tabs(&mut self, session: Session) {
+        let active = session
+            .active_index
+            .min(session.tabs.len().saturating_sub(1));
+        for saved in session.tabs {
+            let id = self.next_tab_id;
+            self.next_tab_id += 1;
+            let title = if saved.title.trim().is_empty() {
+                saved.url.clone()
+            } else {
+                saved.title
+            };
+            self.tabs.push(Tab::new(id, None, saved.url, title, false));
         }
-
-        let index = self.tabs.iter().position(|t| t.id == id);
-        if let Some(idx) = index {
-            let was_active = self.active_tab_id == id;
-            let removed = self.tabs.remove(idx);
-            removed.set_visible(false);
-
-            if was_active {
-                // Activate adjacent tab
-                let new_idx = if idx >= self.tabs.len() {
-                    self.tabs.len() - 1
-                } else {
-                    idx
-                };
-                self.active_tab_id = self.tabs[new_idx].id;
-                let content_rect = self.content_rect();
-                for tab in &self.tabs {
-                    if tab.id == self.active_tab_id {
-                        tab.set_bounds(content_rect);
-                        tab.set_visible(true);
-                        tab.focus();
-                    } else {
-                        tab.set_visible(false);
-                    }
-                }
-                self.sync_window_title();
-            }
-
-            self.update_ui();
-        }
+        let id = self.tabs[active].id;
+        self.activate(id);
+        self.update_ui();
     }
 
-    pub fn switch_tab(&mut self, id: usize) {
-        if self.active_tab_id == id || !self.tabs.iter().any(|tab| tab.id == id) {
+    /// Shows tab `id` (creating its webview if it was restored lazily) and hides the others.
+    fn activate(&mut self, id: usize) {
+        let Some(idx) = self.tabs.iter().position(|t| t.id == id) else {
             return;
+        };
+        if self.tabs[idx].webview.is_none() {
+            let url = self.tabs[idx].url.clone();
+            let webview = self.create_tab_webview(id, &url);
+            let tab = &mut self.tabs[idx];
+            tab.webview = Some(webview);
+            tab.init_adblock_enabled = self.adblock_enabled.get();
+            tab.is_loading = true;
         }
 
         let content_rect = self.content_rect();
@@ -601,10 +632,161 @@ impl BrowserApp {
                 tab.set_visible(false);
             }
         }
-
         self.active_tab_id = id;
         self.sync_window_title();
+    }
+
+    fn remember_closed(&mut self, idx: usize) {
+        let tab = &self.tabs[idx];
+        if Self::internal_page_kind(&tab.url) == Some(InternalPage::NewTab)
+            || tab.url.is_empty()
+            || tab.url == "about:blank"
+        {
+            return;
+        }
+        let entry = SessionTab {
+            url: Self::session_url(&tab.url),
+            title: tab.title.clone(),
+        };
+        if self.closed_tabs.len() >= MAX_CLOSED_TABS {
+            self.closed_tabs.remove(0);
+        }
+        self.closed_tabs.push(entry);
+    }
+
+    pub fn close_tab(&mut self, id: usize) {
+        let Some(idx) = self.tabs.iter().position(|t| t.id == id) else {
+            return;
+        };
+
+        if self.tabs.len() <= 1 {
+            // If only one tab left, reset it to newtab instead of closing window
+            if Self::internal_page_kind(&self.tabs[0].url) != Some(InternalPage::NewTab) {
+                self.remember_closed(0);
+                let tab = &mut self.tabs[0];
+                tab.load_url("browser://newtab");
+                tab.url = "browser://newtab".to_string();
+                tab.title = "Uusi välilehti".to_string();
+                tab.is_loading = true;
+                self.sync_window_title();
+                self.update_ui();
+                self.sync_session();
+            }
+            return;
+        }
+
+        self.remember_closed(idx);
+        let was_active = self.active_tab_id == id;
+        let removed = self.tabs.remove(idx);
+        removed.set_visible(false);
+        drop(removed);
+
+        if was_active {
+            // Activate adjacent tab
+            let new_idx = idx.min(self.tabs.len() - 1);
+            let next_id = self.tabs[new_idx].id;
+            self.activate(next_id);
+        }
+
         self.update_ui();
+        self.sync_session();
+    }
+
+    pub fn switch_tab(&mut self, id: usize) {
+        if self.active_tab_id == id || !self.tabs.iter().any(|tab| tab.id == id) {
+            return;
+        }
+        self.activate(id);
+        self.update_ui();
+        self.sync_session();
+    }
+
+    pub fn cycle_tab(&mut self, forward: bool) {
+        let len = self.tabs.len();
+        if len < 2 {
+            return;
+        }
+        let Some(idx) = self.tabs.iter().position(|t| t.id == self.active_tab_id) else {
+            return;
+        };
+        let next = if forward {
+            (idx + 1) % len
+        } else {
+            (idx + len - 1) % len
+        };
+        let id = self.tabs[next].id;
+        self.switch_tab(id);
+    }
+
+    pub fn reopen_closed_tab(&mut self) {
+        if let Some(entry) = self.closed_tabs.pop() {
+            self.new_tab(Some(entry.url));
+        }
+    }
+
+    /// Internal pages are stored as `browser://x` so they restore regardless of WebView2's mapping.
+    fn session_url(url: &str) -> String {
+        match Self::internal_page_kind(url) {
+            Some(page) => page.browser_url().to_string(),
+            None => url.to_string(),
+        }
+    }
+
+    /// Mirrors open tabs into storage; the background writer only runs when something changed.
+    fn sync_session(&mut self) {
+        let tabs: Vec<SessionTab> = self
+            .tabs
+            .iter()
+            .filter(|t| !t.url.is_empty() && t.url != "about:blank")
+            .map(|t| SessionTab {
+                url: Self::session_url(&t.url),
+                title: t.title.clone(),
+            })
+            .collect();
+        let active_index = self
+            .tabs
+            .iter()
+            .filter(|t| !t.url.is_empty() && t.url != "about:blank")
+            .position(|t| t.id == self.active_tab_id)
+            .unwrap_or(0);
+        let session = Session {
+            tabs,
+            active_index,
+            ..self.storage.data.session.clone()
+        };
+        self.storage.set_session(session);
+    }
+
+    fn restore_window_state(window: &Window, session: &Session) {
+        if let Some((w, h)) = session.window_size {
+            let scale = window.scale_factor();
+            // Never restore bigger than the current monitor (it may have changed since).
+            let (max_w, max_h) = window
+                .current_monitor()
+                .map(|m| {
+                    let s = m.size().to_logical::<f64>(scale);
+                    (s.width, s.height)
+                })
+                .unwrap_or((f64::MAX, f64::MAX));
+            let w = w.clamp(640.0, max_w.max(640.0));
+            let h = h.clamp(480.0, max_h.max(480.0));
+            window.set_inner_size(LogicalSize::new(w, h));
+        }
+        if session.maximized {
+            window.set_maximized(true);
+        }
+    }
+
+    fn save_window_state(&mut self) {
+        let mut session = self.storage.data.session.clone();
+        session.maximized = self.window.is_maximized();
+        if !session.maximized && self.window_size.width > 0 && self.window_size.height > 0 {
+            let size = self
+                .window_size
+                .to_logical::<f64>(self.window.scale_factor());
+            session.window_size = Some((size.width, size.height));
+        }
+        self.storage.set_session(session);
     }
 
     pub fn navigate_active(&mut self, input: &str) {
@@ -680,7 +862,7 @@ impl BrowserApp {
         self.adblock_enabled.set(enabled);
         let script = format!("window.__viimaAdblockSetEnabled({enabled});");
         for tab in &self.tabs {
-            let _ = tab.webview.evaluate_script(&script);
+            tab.run_script(&script);
         }
         self.update_data();
     }
@@ -696,9 +878,9 @@ impl BrowserApp {
         let _ = self.ui_webview.evaluate_script(&script);
         let _ = self.ui_webview.set_theme(web_theme(dark));
         for tab in &self.tabs {
-            let _ = tab.webview.set_theme(web_theme(dark));
+            tab.set_theme(web_theme(dark));
             if Self::is_internal_page_url(&tab.url) {
-                let _ = tab.webview.evaluate_script(&script);
+                tab.run_script(&script);
             }
         }
         self.update_data();
@@ -717,7 +899,7 @@ impl BrowserApp {
             tab.on_page_finished(&url);
             if tab.init_adblock_enabled != enabled {
                 let script = format!("window.__viimaAdblockSetEnabled({enabled});");
-                let _ = tab.webview.evaluate_script(&script);
+                tab.run_script(&script);
             }
             let title = tab.title.clone();
             self.storage.add_history_entry(title, url);
@@ -726,16 +908,21 @@ impl BrowserApp {
         }
         self.update_ui();
         self.push_history_to_open_tabs();
+        self.sync_session();
     }
 
     pub fn on_title_changed(&mut self, id: usize, title: String) {
-        if let Some(tab) = self.tabs.iter_mut().find(|t| t.id == id) {
-            tab.on_title_changed(&title);
-            if id == self.active_tab_id {
-                self.window.set_title(&format!("{} - Viima", tab.title));
-            }
-            self.update_ui();
+        let Some(tab) = self.tabs.iter_mut().find(|t| t.id == id) else {
+            return;
+        };
+        tab.on_title_changed(&title);
+        if id == self.active_tab_id {
+            self.window.set_title(&window_title(&tab.title));
         }
+        let (url, title) = (tab.url.clone(), tab.title.clone());
+        self.storage.update_history_title(&url, &title);
+        self.update_ui();
+        self.sync_session();
     }
 
     pub fn on_resize(&mut self, new_size: PhysicalSize<u32>) {
@@ -786,6 +973,8 @@ impl BrowserApp {
 
     /// Persist pending writes; call before exiting.
     pub fn flush(&mut self) {
+        self.sync_session();
+        self.save_window_state();
         self.storage.flush();
     }
 
@@ -925,7 +1114,7 @@ impl BrowserApp {
 
     fn sync_window_title(&self) {
         if let Some(tab) = self.tabs.iter().find(|t| t.id == self.active_tab_id) {
-            self.window.set_title(&format!("{} - Viima", tab.title));
+            self.window.set_title(&window_title(&tab.title));
         }
     }
 
@@ -952,7 +1141,7 @@ impl BrowserApp {
         if let Some(script) = Self::internal_state_script(&payload) {
             for tab in &self.tabs {
                 if Self::internal_page_kind(&tab.url) == Some(InternalPage::History) {
-                    let _ = tab.webview.evaluate_script(&script);
+                    tab.run_script(&script);
                 }
             }
         }
@@ -1035,7 +1224,7 @@ impl BrowserApp {
                     None => continue,
                 };
                 if let Some(script) = script {
-                    let _ = tab.webview.evaluate_script(script);
+                    tab.run_script(script);
                 }
             }
         }
