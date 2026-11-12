@@ -486,10 +486,7 @@ impl BrowserApp {
             })
             .with_navigation_handler(move |url| {
                 // If navigation matches ad blocker domain, block it
-                if adblock_policy.get() && AdBlocker::should_block_url(&url) {
-                    return false;
-                }
-                true
+                !(adblock_policy.get() && AdBlocker::should_block_url(&url))
             })
             .with_new_window_req_handler(move |url, _| {
                 // Open new window requests (e.g. target="_blank") cleanly as tabs.
