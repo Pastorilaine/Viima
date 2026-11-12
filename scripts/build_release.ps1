@@ -12,7 +12,7 @@ $UpperAe = [char]0x00C4
 $UpperOe = [char]0x00D6
 
 if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
-    $ReleaseNotes = "Viima-selaimen julkaisu (uusi Viima-logo ja br${LowerAe}ndi, asennusohjelma, automaattiset p${LowerAe}ivitykset ja taustakuvat)."
+    $ReleaseNotes = "Viima-selaimen p${LowerAe}ivitys. Muutokset: https://github.com/Pastorilaine/Viima/releases"
 }
 
 $RootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path

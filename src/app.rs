@@ -252,7 +252,8 @@ impl BrowserApp {
         let is_bookmarks = matches!(host, "bookmarks" | "browser.bookmarks");
         let is_settings = matches!(host, "settings" | "browser.settings");
 
-        let (content_type, raw_bytes): (&'static str, &'static [u8]) = if path == "/viima-logo.png" {
+        let (content_type, raw_bytes): (&'static str, &'static [u8]) = if path == "/viima-logo.png"
+        {
             (
                 "image/png",
                 include_bytes!("../assets/branding/viima-logo.png"),
@@ -406,8 +407,7 @@ impl BrowserApp {
                 }
                 "set_search_engine" => {
                     if let Some(engine) = v.get("engine").and_then(|e| e.as_str()) {
-                        let _ =
-                            proxy.send_event(AppEvent::IpcSetSearchEngine(engine.to_string()));
+                        let _ = proxy.send_event(AppEvent::IpcSetSearchEngine(engine.to_string()));
                     }
                 }
                 "toggle_adblock" => {
@@ -507,10 +507,15 @@ impl BrowserApp {
             SHORTCUT_SCRIPT
         ));
 
-        builder
+        let webview = builder
             .with_url(initial_url)
             .build_as_child(&*self.window)
-            .expect("Failed to create tab webview")
+            .expect("Failed to create tab webview");
+        #[cfg(windows)]
+        if let Err(e) = AdBlocker::install_network_filter(&webview, self.adblock_enabled.clone()) {
+            eprintln!("adblock network filter unavailable: {e}");
+        }
+        webview
     }
 
     pub fn new_tab(&mut self, url: Option<String>) {
@@ -1074,10 +1079,16 @@ mod tests {
     #[test]
     fn test_ipc_trust_is_exact() {
         let uri = |s: &str| s.parse::<wry::http::Uri>().unwrap();
-        assert!(BrowserApp::is_trusted_ipc_source(&uri("http://browser.settings/")));
+        assert!(BrowserApp::is_trusted_ipc_source(&uri(
+            "http://browser.settings/"
+        )));
         // bare hosts would resolve via real DNS; lookalikes must not pass
         assert!(!BrowserApp::is_trusted_ipc_source(&uri("http://settings/")));
-        assert!(!BrowserApp::is_trusted_ipc_source(&uri("http://browser.settings.evil.com/")));
-        assert!(!BrowserApp::is_trusted_ipc_source(&uri("https://evil.com/browser.settings")));
+        assert!(!BrowserApp::is_trusted_ipc_source(&uri(
+            "http://browser.settings.evil.com/"
+        )));
+        assert!(!BrowserApp::is_trusted_ipc_source(&uri(
+            "https://evil.com/browser.settings"
+        )));
     }
 }
