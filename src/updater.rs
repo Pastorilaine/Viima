@@ -8,9 +8,9 @@ use std::time::Duration;
 pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn default_update_url() -> &'static str {
-    option_env!("OMA_SELAIN_UPDATE_URL").unwrap_or(
-        "https://github.com/Pastorilaine/Viima/releases/latest/download/latest.json",
-    )
+    option_env!("VIIMA_UPDATE_URL")
+        .or(option_env!("OMA_SELAIN_UPDATE_URL"))
+        .unwrap_or("https://github.com/Pastorilaine/Viima/releases/latest/download/latest.json")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +107,7 @@ pub fn parse_manifest(body: &str) -> Result<UpdateInfo, String> {
                 let lower = a.name.to_ascii_lowercase();
                 lower.ends_with(".exe") && !lower.contains("setup")
             })
-            .ok_or_else(|| "GitHub-julkaisusta ei löytynyt OmaSelain.exe-tiedostoa.".to_string())?;
+            .ok_or_else(|| "GitHub-julkaisusta ei löytynyt Viima.exe-tiedostoa.".to_string())?;
 
         if !asset.browser_download_url.starts_with("https://") {
             return Err("Päivitystiedoston osoite ei ole HTTPS.".into());
@@ -144,7 +144,7 @@ pub fn check_for_update(update_url: &str) -> Result<Option<UpdateInfo>, String> 
     }
 
     let agent = http_agent();
-    let user_agent = format!("OmaSelain/{CURRENT_VERSION}");
+    let user_agent = format!("Viima/{CURRENT_VERSION}");
     let mut resp = agent
         .get(trimmed)
         .header("User-Agent", &user_agent)
@@ -170,7 +170,7 @@ fn updates_dir() -> PathBuf {
     if let Some(dir) = crate::win_platform::default_install_dir() {
         return dir.join("updates");
     }
-    std::env::temp_dir().join("oma_selain_updates")
+    std::env::temp_dir().join("viima_updates")
 }
 
 pub fn download_and_stage_update(info: &UpdateInfo) -> Result<PathBuf, String> {
@@ -181,15 +181,15 @@ pub fn download_and_stage_update(info: &UpdateInfo) -> Result<PathBuf, String> {
     let dir = updates_dir();
     fs::create_dir_all(&dir).map_err(|e| format!("Päivityskansion luonti epäonnistui: {e}"))?;
 
-    let part_path = dir.join("OmaSelain-staged.exe.part");
-    let staged_path = dir.join("OmaSelain-staged.exe");
+    let part_path = dir.join("Viima-staged.exe.part");
+    let staged_path = dir.join("Viima-staged.exe");
     let _ = fs::remove_file(&part_path);
 
     let agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(120)))
         .build();
     let agent: ureq::Agent = agent.into();
-    let user_agent = format!("OmaSelain/{CURRENT_VERSION}");
+    let user_agent = format!("Viima/{CURRENT_VERSION}");
 
     let mut resp = agent
         .get(&info.download_url)
@@ -398,11 +398,15 @@ fn run_uninstall(quiet: bool) {
     }
     crate::win_platform::remove_uninstall_entry();
 
-    if delete_user_data
-        && let Some(proj) = directories::ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain")
-    {
-        let _ = fs::remove_dir_all(proj.config_dir());
-        let _ = fs::remove_dir_all(proj.data_local_dir());
+    if delete_user_data {
+        if let Some(proj) = directories::ProjectDirs::from("fi", "IT-Veljekset", "Viima") {
+            let _ = fs::remove_dir_all(proj.config_dir());
+            let _ = fs::remove_dir_all(proj.data_local_dir());
+        }
+        if let Some(proj) = directories::ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain") {
+            let _ = fs::remove_dir_all(proj.config_dir());
+            let _ = fs::remove_dir_all(proj.data_local_dir());
+        }
     }
 
     if let Ok(exe) = std::env::current_exe() {
@@ -455,7 +459,7 @@ mod tests {
     fn test_parse_latest_json_manifest() {
         let json = r#"{
             "version": "0.3.1",
-            "download_url": "https://github.com/Pastorilaine/oma-selain/releases/download/v0.3.1/OmaSelain.exe",
+            "download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima.exe",
             "sha256": "deadbeef",
             "release_notes": "Bugikorjauksia"
         }"#;
@@ -471,19 +475,19 @@ mod tests {
             "body": "Uusi julkaisu",
             "assets": [
                 {
-                    "name": "OmaSelain-Setup.exe",
-                    "browser_download_url": "https://github.com/Pastorilaine/oma-selain/releases/download/v0.3.1/OmaSelain-Setup.exe"
+                    "name": "Viima-Setup.exe",
+                    "browser_download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima-Setup.exe"
                 },
                 {
-                    "name": "OmaSelain.exe",
-                    "browser_download_url": "https://github.com/Pastorilaine/oma-selain/releases/download/v0.3.1/OmaSelain.exe",
+                    "name": "Viima.exe",
+                    "browser_download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima.exe",
                     "digest": "sha256:abcdef1234"
                 }
             ]
         }"#;
         let info = parse_manifest(json).unwrap();
         assert_eq!(info.version, "v0.3.1");
-        assert!(info.download_url.ends_with("/OmaSelain.exe"));
+        assert!(info.download_url.ends_with("/Viima.exe"));
         assert_eq!(info.sha256.as_deref(), Some("abcdef1234"));
     }
 
@@ -491,7 +495,7 @@ mod tests {
     fn test_rejects_insecure_http_download() {
         let json = r#"{
             "version": "0.3.1",
-            "download_url": "http://evil.com/OmaSelain.exe"
+            "download_url": "http://evil.com/Viima.exe"
         }"#;
         assert!(parse_manifest(json).is_err());
     }

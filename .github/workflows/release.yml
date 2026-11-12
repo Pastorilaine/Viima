@@ -67,9 +67,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            releases/latest/OmaSelain-Setup.exe
-            releases/latest/OmaSelain.exe
+            releases/latest/Viima-Setup.exe
+            releases/latest/Viima.exe
             releases/latest/latest.json
-            releases/latest/OmaSelain_*.zip
+            releases/latest/Viima_*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

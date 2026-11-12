@@ -1,5 +1,7 @@
 $candidates = @(
+    (Join-Path $PSScriptRoot 'releases\latest\Viima.exe'),
     (Join-Path $PSScriptRoot 'releases\latest\OmaSelain.exe'),
+    (Join-Path $PSScriptRoot 'target\release\viima.exe'),
     (Join-Path $PSScriptRoot 'target\release\oma_selain.exe')
 )
 $browserPath = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1

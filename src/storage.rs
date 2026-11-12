@@ -153,7 +153,19 @@ impl Default for BrowserData {
 
 /// WebView2 profile folder (cookies, cache, logins) under %LOCALAPPDATA%.
 pub fn webview_data_dir() -> Option<PathBuf> {
-    ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain").map(|d| d.data_local_dir().join("WebView2"))
+    ProjectDirs::from("fi", "IT-Veljekset", "Viima").map(|d| {
+        let new_dir = d.data_local_dir().join("WebView2");
+        if !new_dir.exists()
+            && let Some(old) = ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain")
+        {
+            let old_dir = old.data_local_dir().join("WebView2");
+            if old_dir.exists() {
+                let _ = fs::create_dir_all(d.data_local_dir());
+                let _ = fs::rename(&old_dir, &new_dir);
+            }
+        }
+        new_dir
+    })
 }
 
 pub struct StorageManager {
@@ -278,10 +290,19 @@ impl StorageManager {
     }
 
     fn resolve_storage_path() -> PathBuf {
-        if let Some(proj_dirs) = ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain") {
+        if let Some(proj_dirs) = ProjectDirs::from("fi", "IT-Veljekset", "Viima") {
             let dir = proj_dirs.config_dir();
             let _ = fs::create_dir_all(dir);
-            dir.join("browser_data.json")
+            let target = dir.join("browser_data.json");
+            if !target.exists()
+                && let Some(old) = ProjectDirs::from("fi", "IT-Veljekset", "OmaSelain")
+            {
+                let old_target = old.config_dir().join("browser_data.json");
+                if old_target.exists() {
+                    let _ = fs::copy(&old_target, &target);
+                }
+            }
+            target
         } else {
             PathBuf::from("browser_data.json")
         }
@@ -466,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_writer_persists_latest_on_flush() {
-        let path = std::env::temp_dir().join("test_oma_selain_writer.json");
+        let path = std::env::temp_dir().join("test_viima_writer.json");
         let (tx, handle) = spawn_writer(path.clone(), Default::default());
         let mut old = BrowserData::default();
         old.settings.search_engine = "bing".into();

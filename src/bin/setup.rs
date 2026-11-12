@@ -22,7 +22,7 @@ mod installer {
 
     const APP_NAME: &str = "Viima";
     const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-    const EXE_NAME: &str = "OmaSelain.exe";
+    const EXE_NAME: &str = "Viima.exe";
     const WEBVIEW2_URL: &str = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 
     struct SetupOptions {
@@ -55,7 +55,7 @@ mod installer {
         fs::create_dir_all(parent)
             .map_err(|e| format!("Asennuskansion luonti epäonnistui: {e}"))?;
 
-        let tmp_path = parent.join("OmaSelain.exe.tmp");
+        let tmp_path = parent.join("Viima.exe.tmp");
         {
             let mut f = File::create(&tmp_path)
                 .map_err(|e| format!("Väliaikaistiedoston luonti epäonnistui: {e}"))?;
@@ -146,7 +146,7 @@ mod installer {
             if !opts.silent {
                 win_platform::show_message_box(
                     &title,
-                    "Asennuspaketti ei sisällä selaintiedostoa (OMA_SELAIN_PAYLOAD puuttui käännöksessä).\n\nKäytä julkaisupakettia tai skriptiä scripts/build_release.ps1.",
+                    "Asennuspaketti ei sisällä selaintiedostoa (VIIMA_PAYLOAD puuttui käännöksessä).\n\nKäytä julkaisupakettia tai skriptiä scripts/build_release.ps1.",
                     MB_OK | MB_ICONERROR,
                 );
             }
@@ -168,7 +168,7 @@ mod installer {
             if !win_platform::is_webview2_installed() {
                 let wv = win_platform::show_message_box(
                     &title,
-                    "Järjestelmästä ei löytynyt Microsoft Edge WebView2 Runtime -komponenttia, jota Oma Selain tarvitsee verkkosivujen näyttämiseen.\n\nHaluatko avata Microsoftin lataussivun nyt?\n(Kyllä = Avaa lataussivu, Ei = Jatka asennusta silti, Peruuta = Lopeta)",
+                    "Järjestelmästä ei löytynyt Microsoft Edge WebView2 Runtime -komponenttia, jota Viima tarvitsee verkkosivujen näyttämiseen.\n\nHaluatko avata Microsoftin lataussivun nyt?\n(Kyllä = Avaa lataussivu, Ei = Jatka asennusta silti, Peruuta = Lopeta)",
                     MB_YESNOCANCEL | MB_ICONWARNING,
                 );
                 if wv == IDYES {

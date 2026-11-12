@@ -1,16 +1,16 @@
 [package]
-name = "oma_selain"
+name = "viima"
 version = "0.3.0"
 edition = "2024"
-default-run = "oma_selain"
+default-run = "viima"
 build = "build.rs"
 
 [[bin]]
-name = "oma_selain"
+name = "viima"
 path = "src/main.rs"
 
 [[bin]]
-name = "oma_selain_setup"
+name = "viima_setup"
 path = "src/bin/setup.rs"
 
 [dependencies]

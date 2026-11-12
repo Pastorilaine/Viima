@@ -58,16 +58,16 @@ impl AdBlocker {
     pub fn get_injection_script() -> &'static str {
         r#"
         (function() {
-            if (window.__omaSelainAdblockSetEnabled) return;
+            if (window.__viimaAdblockSetEnabled) return;
             let observer = null;
             let originalAdsbygooglePush = null;
             let hadOwnAdsbygooglePush = false;
             let createdAdsbygoogle = false;
-            window.__omaSelainAdblockSetEnabled = function(enabled) {
+            window.__viimaAdblockSetEnabled = function(enabled) {
                 if (!enabled) {
                     if (observer) observer.disconnect();
                     observer = null;
-                    const style = document.getElementById('__oma_selain_adblock_css');
+                    const style = document.getElementById('__viima_adblock_css');
                     if (style) style.remove();
                     if (createdAdsbygoogle) {
                         delete window.adsbygoogle;
@@ -81,11 +81,11 @@ impl AdBlocker {
                     originalAdsbygooglePush = null;
                     hadOwnAdsbygooglePush = false;
                     createdAdsbygoogle = false;
-                    window.__oma_selain_adblock_injected = false;
+                    window.__viima_adblock_injected = false;
                     return;
                 }
-                if (window.__oma_selain_adblock_injected) return;
-                window.__oma_selain_adblock_injected = true;
+                if (window.__viima_adblock_injected) return;
+                window.__viima_adblock_injected = true;
 
                 // Safe mock for common ad APIs to prevent page crashes
                 createdAdsbygoogle = !window.adsbygoogle;
@@ -98,7 +98,7 @@ impl AdBlocker {
 
                 // Inject cosmetic filter CSS
                 const style = document.createElement('style');
-                style.id = '__oma_selain_adblock_css';
+                style.id = '__viima_adblock_css';
                 style.textContent = `
                 ins.adsbygoogle,
                 div[id*="google_ads"],
@@ -130,9 +130,9 @@ impl AdBlocker {
                 `;
 
                 function applyStyle() {
-                    if (!window.__oma_selain_adblock_injected) return;
+                    if (!window.__viima_adblock_injected) return;
                     const target = document.head || document.documentElement;
-                    if (target && !document.getElementById('__oma_selain_adblock_css')) {
+                    if (target && !document.getElementById('__viima_adblock_css')) {
                         target.appendChild(style);
                     }
                 }
@@ -159,7 +159,7 @@ impl AdBlocker {
                 });
 
                 const observe = () => {
-                    if (window.__oma_selain_adblock_injected && document.body && observer) {
+                    if (window.__viima_adblock_injected && document.body && observer) {
                         observer.observe(document.body, { childList: true, subtree: true });
                     }
                 };

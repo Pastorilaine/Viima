@@ -1,4 +1,4 @@
-# Viima (ent. Oma Selain) 🦀🌐
+# Viima 🦀🌐
 
 Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset Groupilta**, joka on rakennettu **Rustilla** ja **WebView2 / Wry / Tao** -arkkitehtuurilla.
 
@@ -32,13 +32,13 @@ Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset 
 - **⭐ Kirjanmerkit ja selaushistoria**:
   - Lisää aktiivinen sivu kirjanmerkkeihin yhdellä klikkauksella (`★` tai `Ctrl+D`).
   - Tallennettujen kirjanmerkkien ja historian selaus, haku ja poisto selaimen sisäsivuilla.
-  - Pysyvä tallennus käyttäjän AppData-hakemistoon (`%APPDATA%\IT-Veljekset\OmaSelain\config\browser_data.json`).
+  - Pysyvä tallennus käyttäjän AppData-hakemistoon (`%APPDATA%\IT-Veljekset\Viima\config\browser_data.json`).
 - **🏠 Moderni suomenkielinen aloitussivu (`browser://newtab`)**:
   - Reaaliaikainen digitaalikello ja päivämäärä suomeksi.
   - Vuorokaudenaikaan mukautuva tervehdys ja valittavat taustakuvat (Aurora, Glass Waves, Nordic Light).
   - Tyylikäs pikahakukenttä ja pikalinkit suosituimmille sivustoille.
 - **📦 Windows-asennusohjelma ja automaattiset päivitykset**:
-  - Käyttäjäkohtainen asennus kansioon `%LOCALAPPDATA%\IT-Veljekset\OmaSelain` (`OmaSelain-Setup.exe`, ei järjestelmänvalvojan oikeuksia, `--silent`-tuki, Käynnistä-valikon ja työpöydän pikakuvakkeet sekä Windowsin Sovellukset ja ominaisuudet -poistomerkintä).
+  - Käyttäjäkohtainen asennus kansioon `%LOCALAPPDATA%\IT-Veljekset\Viima` (`Viima-Setup.exe`, ei järjestelmänvalvojan oikeuksia, `--silent`-tuki, Käynnistä-valikon ja työpöydän pikakuvakkeet sekä Windowsin Sovellukset ja ominaisuudet -poistomerkintä).
   - GitHub Releases -pohjainen automaattinen päivitys (`latest.json` + SHA-256-varmennus ja automaattinen binäärin vaihto uudelleenkäynnistyksen yhteydessä).
 
 ---
@@ -70,22 +70,22 @@ cargo run
 ```
 
 ### Tuotantoversion ja asennusohjelman kääntäminen
-Suositeltu tapa kääntää koko tuotantopaketti (`OmaSelain.exe`, `OmaSelain-Setup.exe`, `OmaSelain_v*_Windows_x64.zip` ja `latest.json` kansioihin `releases/latest/` ja `releases/v<versio>/`):
+Suositeltu tapa kääntää koko tuotantopaketti (`Viima.exe`, `Viima-Setup.exe`, `Viima_v*_Windows_x64.zip` ja `latest.json` kansioihin `releases/latest/` ja `releases/v<versio>/`):
 ```powershell
 .\scripts\build_release.ps1
 ```
 Voit ajaa pelkän selaimen release-käännöksen myös komennolla:
 ```bash
-cargo build --release --bin oma_selain
+cargo build --release --bin viima
 ```
-Asennusohjelma tukee myös hiljaista asennusta (`OmaSelain-Setup.exe --silent`).
+Asennusohjelma tukee myös hiljaista asennusta (`Viima-Setup.exe --silent`).
 
 ---
 
 ## 📁 Projektirakenne
 
 ```text
-oma-selain/
+viima/
 ├── Cargo.toml                  # Riippuvuudet (wry, tao, serde, sha2, ureq, windows)
 ├── build.rs                    # Asennusohjelman upotetun binäärin kääntölinkitys
 ├── scripts/
@@ -103,7 +103,7 @@ oma-selain/
 │   ├── url_resolver.rs         # Osoitteiden ja hakukoneiden ratkaisija
 │   ├── updater.rs              # GitHub Releases -päivitystarkistus, SHA-256 ja --uninstall
 │   ├── win_platform.rs         # Windows-pikakuvakkeet, rekisteri ja WebView2-tarkistus
-│   └── bin/setup.rs            # Natiivi Windows-asennusohjelma (OmaSelain-Setup.exe)
+│   └── bin/setup.rs            # Natiivi Windows-asennusohjelma (Viima-Setup.exe)
 ├── assets/
 │   ├── branding/               # Viima-logo (.png, .ico, 64x64 .rgba)
 │   ├── ui/
@@ -127,9 +127,9 @@ oma-selain/
 - **Osoiterivi ei valehtele**: vain neljä sisäsivua näytetään `browser://`-nimellä, muut osoitteet näkyvät sellaisenaan. `http://`-sivut saavat punaisen varoituskuvakkeen.
 - **Sisäsivut suojattu**: web-sivu ei voi upottaa asetus- tai historiasivuja (clickjacking) eikä lähettää selaimelle muita komentoja kuin pikanäppäimiä.
 - **`window.open`/`target=_blank`** avaa vain `http(s)`-osoitteita, ei `file://`-osoitteita.
-- Kirjautumiset säilyvät uudelleenkäynnistyksen yli: `%LOCALAPPDATA%\IT-Veljekset\OmaSelain\data\WebView2` (kuten Edgessä). Poista kansio, jos haluat kirjautua kaikkialta ulos.
+- Kirjautumiset säilyvät uudelleenkäynnistyksen yli: `%LOCALAPPDATA%\IT-Veljekset\Viima\data\WebView2` (kuten Edgessä). Poista kansio, jos haluat kirjautua kaikkialta ulos.
 - Huomio: selain on uusi eikä sisällä salasananhallintaa tai laajennuksia. Google voi estää kirjautumisen upotetuissa selaimissa.
 
 ## 🔒 Yksityisyys ja tietosuoja
 
-Oma Selain ei lähetä telemetriaa tai selaustietoja kolmansille osapuolille. Kaikki selaushistoria ja kirjanmerkit säilytetään vain ja ainoastaan käyttäjän omalla laitteella.
+Viima ei lähetä telemetriaa tai selaustietoja kolmansille osapuolille. Kaikki selaushistoria ja kirjanmerkit säilytetään vain ja ainoastaan käyttäjän omalla laitteella.

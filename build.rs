@@ -54,11 +54,11 @@ fn compile_windows_icon(out_dir: &Path) {
 
     if matches!(status, Ok(s) if s.success()) && res_file.is_file() {
         println!(
-            "cargo:rustc-link-arg-bin=oma_selain={}",
+            "cargo:rustc-link-arg-bin=viima={}",
             res_file.display()
         );
         println!(
-            "cargo:rustc-link-arg-bin=oma_selain_setup={}",
+            "cargo:rustc-link-arg-bin=viima_setup={}",
             res_file.display()
         );
     } else {
@@ -67,6 +67,7 @@ fn compile_windows_icon(out_dir: &Path) {
 }
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=VIIMA_PAYLOAD");
     println!("cargo:rerun-if-env-changed=OMA_SELAIN_PAYLOAD");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest = out_dir.join("payload_path.rs");
@@ -75,10 +76,11 @@ fn main() {
         compile_windows_icon(&out_dir);
     }
 
-    if let Ok(payload) = env::var("OMA_SELAIN_PAYLOAD")
+    let payload_var = env::var("VIIMA_PAYLOAD").or_else(|_| env::var("OMA_SELAIN_PAYLOAD"));
+    if let Ok(payload) = payload_var
         && !payload.trim().is_empty()
     {
-        let abs = fs::canonicalize(&payload).expect("OMA_SELAIN_PAYLOAD path not found");
+        let abs = fs::canonicalize(&payload).expect("VIIMA_PAYLOAD path not found");
         println!("cargo:rerun-if-changed={}", abs.display());
         let escaped = abs
             .to_string_lossy()

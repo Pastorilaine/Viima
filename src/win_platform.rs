@@ -25,7 +25,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{GUID, HSTRING, Interface, PCWSTR};
 
-const UNINSTALL_REG_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\OmaSelain";
+const UNINSTALL_REG_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Viima";
+const LEGACY_UNINSTALL_REG_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\OmaSelain";
 const WEBVIEW2_CLIENT_GUID: &str = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
 pub fn to_wide_null(s: &str) -> Vec<u16> {
@@ -42,7 +43,7 @@ fn known_folder(folder_id: &GUID) -> Option<PathBuf> {
 }
 
 pub fn default_install_dir() -> Option<PathBuf> {
-    known_folder(&FOLDERID_LocalAppData).map(|d| d.join("IT-Veljekset").join("OmaSelain"))
+    known_folder(&FOLDERID_LocalAppData).map(|d| d.join("IT-Veljekset").join("Viima"))
 }
 
 pub fn desktop_shortcut_path() -> Option<PathBuf> {
@@ -201,8 +202,10 @@ pub fn register_uninstall_entry(
 
 pub fn remove_uninstall_entry() {
     let subkey_w = to_wide_null(UNINSTALL_REG_PATH);
+    let legacy_w = to_wide_null(LEGACY_UNINSTALL_REG_PATH);
     unsafe {
         let _ = RegDeleteTreeW(HKEY_CURRENT_USER, PCWSTR(subkey_w.as_ptr()));
+        let _ = RegDeleteTreeW(HKEY_CURRENT_USER, PCWSTR(legacy_w.as_ptr()));
         SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None);
     }
 }

@@ -1,6 +1,6 @@
 # Muutosloki / Changelog — Viima 🦀🌐
 
-Kaikki merkittävät muutokset Viima-verkkoselaimeen (ent. Oma Selain) dokumentoidaan tässä tiedostossa.
+Kaikki merkittävät muutokset Viima-verkkoselaimeen dokumentoidaan tässä tiedostossa.
 Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -ohjeistusta ja [SemVer](https://semver.org/lang/fi/) -versiointia.
 
 ---
@@ -12,9 +12,9 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 - **Viima-logo ja Windows-sovellusikoni**:
   - Korkearesoluutioinen revontuliteemainen app-logo ja favicon (`assets/branding/viima-logo.png`).
   - Monikokoinen Windows `.ico` -kuvake (16, 32, 48, 256 px) upotettu suoraan Windows SDK:n `rc.exe`-resursseihin sekä selaimeen että asennusohjelmaan.
-- **Natiivi Windows-asennusohjelma (`OmaSelain-Setup.exe`)**:
+- **Natiivi Windows-asennusohjelma (`Viima-Setup.exe`)**:
   - Yksitiedostoinen Rust-asennusohjelma ilman ulkoisia asennustyökaluja (Inno Setup / NSIS ei tarvita).
-  - Asentaa selaimen käyttäjäkohtaisesti polkuun `%LOCALAPPDATA%\IT-Veljekset\OmaSelain` ilman järjestelmänvalvojan oikeuksia.
+  - Asentaa selaimen käyttäjäkohtaisesti polkuun `%LOCALAPPDATA%\IT-Veljekset\Viima` ilman järjestelmänvalvojan oikeuksia.
   - Luo Käynnistä-valikon ja valinnaisen työpöydän `Viima.lnk`-pikakuvakkeet.
   - Rekisteröi Windowsin *Sovellukset ja ominaisuudet* -poistomerkinnän (`Viima v0.3.0`, koko, kuvake ja hiljainen poistokomento).
   - Tukee `--silent`, `--no-desktop` ja `--launch` -komentorivikytkimiä.
@@ -34,7 +34,7 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 ### ⚡ Korjaukset & optimoinnit (Fixed & Changed)
 - **Välilehtipalkin asettelu**: Korjattu CSS-syntaksivirhe, jonka vuoksi toinen välilehti asettui pystysuunnassa edellisen alle ja valui osoiterivin päälle. Lisätty ehdoton `flex-wrap: nowrap` ja säiliön `overflow: hidden`.
 - **Muistinkäyttö & haku**: Optimoidut bang-haut, nopea O(log n) adblock-verkkotunnusten binaarihaku sekä suoraviivaiset välimuistipuskurit.
-- **Kansiorakenne**: Siivottu projektin juuri ja keskitetty kaikki valmiit julkaisut kansioihin `releases/latest/` ja `releases/v0.3.0/`.
+- **Kansiorakenne & nimeäminen**: Siivottu projektin juuri ja keskitetty kaikki valmiit julkaisut kansioihin `releases/latest/` ja `releases/v0.3.0/`. Binäärit ja asennuspaketit nimetty selaimen mukaisesti muotoon `Viima.exe` ja `Viima-Setup.exe`.
 
 ---
 

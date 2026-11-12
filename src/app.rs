@@ -501,7 +501,7 @@ impl BrowserApp {
             });
 
         builder = builder.with_initialization_script(format!(
-            "{} window.__omaSelainAdblockSetEnabled({}); {}",
+            "{} window.__viimaAdblockSetEnabled({}); {}",
             AdBlocker::get_injection_script(),
             adblock_enabled,
             SHORTCUT_SCRIPT
@@ -676,7 +676,7 @@ impl BrowserApp {
     pub fn toggle_adblock(&mut self) {
         let enabled = self.storage.toggle_adblock();
         self.adblock_enabled.set(enabled);
-        let script = format!("window.__omaSelainAdblockSetEnabled({enabled});");
+        let script = format!("window.__viimaAdblockSetEnabled({enabled});");
         for tab in &self.tabs {
             let _ = tab.webview.evaluate_script(&script);
         }
@@ -714,7 +714,7 @@ impl BrowserApp {
         if let Some(tab) = self.tabs.iter_mut().find(|t| t.id == id) {
             tab.on_page_finished(&url);
             if tab.init_adblock_enabled != enabled {
-                let script = format!("window.__omaSelainAdblockSetEnabled({enabled});");
+                let script = format!("window.__viimaAdblockSetEnabled({enabled});");
                 let _ = tab.webview.evaluate_script(&script);
             }
             let title = tab.title.clone();
