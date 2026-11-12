@@ -5,9 +5,10 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
-## [0.3.1] - 2026-11-12
+## [0.3.2] - 2026-11-12
 
 ### ⚡ Korjaukset (Fixed)
+- **Julkaisu**: v0.3.1-tagin CI-käännös kaatui uudemman clippyn varoitukseen; v0.3.2 sisältää saman korjauksen toimivana julkaisuna.
 - **Mainosesto toimii nyt verkkotasolla**: Aiemmin estolista koski vain sivun päätason navigointia, joten mainosskriptit, iframet ja seurantapyynnöt latautuivat silti. Nyt jokainen pyyntö (skriptit, kuvat, XHR, iframet, workerit) suodatetaan WebView2:n `WebResourceRequested`-tapahtumassa ja estetyt palauttavat `403`.
 - **Laajempi estolista**: Lisätty mm. `amazon-adsystem.com`, `google-analytics.com`, `googletagservices.com`, `adsrvr.org`, `teads.tv`, `casalemedia.com`, `indexww.com`, `3lift.com`, `media.net`, `mgid.com`, `doubleverify.com`, `adsafeprotected.com`.
 
