@@ -95,8 +95,26 @@ function renderTabs() {
             entry = {
                 el: tabEl,
                 titleEl: tabEl.querySelector('.tab-title'),
+                iconEl: tabEl.querySelector('.tab-icon'),
+                favicon: null,
             };
             tabElements.set(tab.id, entry);
+        }
+
+        // Site favicon, falling back to the globe if it fails to load.
+        const favicon = internalPage(tab.url || '') ? null : (tab.favicon || null);
+        if (entry.favicon !== favicon) {
+            entry.favicon = favicon;
+            if (favicon) {
+                const img = document.createElement('img');
+                img.alt = '';
+                img.referrerPolicy = 'no-referrer';
+                img.addEventListener('error', () => { entry.iconEl.innerHTML = ICONS.globe; }, { once: true });
+                img.src = favicon;
+                entry.iconEl.replaceChildren(img);
+            } else {
+                entry.iconEl.innerHTML = ICONS.globe;
+            }
         }
 
         const nextClass =
@@ -275,10 +293,16 @@ window.onBrowserStateUpdate = function(state) {
     // Update Adblock button appearance
     if (state.settings && state.settings.adblock_enabled) {
         btnAdblockEl.classList.add('shield-active');
-        if (adblockTextEl) adblockTextEl.textContent = 'Suojattu';
+        const active = state.tabs.find(t => t.id === state.active_tab_id);
+        const blocked = active && active.blocked ? active.blocked : 0;
+        if (adblockTextEl) adblockTextEl.textContent = blocked ? `Suojattu · ${blocked}` : 'Suojattu';
+        btnAdblockEl.title = blocked
+            ? `${blocked} mainos- tai seurantapyyntöä estetty tällä sivulla`
+            : 'Mainosesto päällä';
     } else {
         btnAdblockEl.classList.remove('shield-active');
         if (adblockTextEl) adblockTextEl.textContent = 'Ei käytössä';
+        btnAdblockEl.title = 'Mainosesto pois päältä';
     }
 
     // Update app update pill button when an update is available or ready
@@ -387,6 +411,21 @@ omniboxInputEl.addEventListener('keydown', (e) => {
     }
 });
 
+// Inline autocomplete from history/bookmarks: Rust answers via window.onAutocomplete.
+// Only on insertions with the caret at the end, so Backspace/Delete never fight the user.
+omniboxInputEl.addEventListener('input', (e) => {
+    if (e.inputType && !e.inputType.startsWith('insert')) return;
+    const value = omniboxInputEl.value;
+    if (omniboxInputEl.selectionStart !== value.length) return;
+    sendIpc('autocomplete', { q: value });
+});
+
+window.onAutocomplete = function(typed, suffix) {
+    if (!suffix || omniboxInputEl.value !== typed || document.activeElement !== omniboxInputEl) return;
+    omniboxInputEl.value = typed + suffix;
+    omniboxInputEl.setSelectionRange(typed.length, typed.length + suffix.length);
+};
+
 // Clear stale activeElement focus when user clicks into a page webview
 window.addEventListener('blur', () => {
     if (document.activeElement === omniboxInputEl) {
@@ -404,7 +443,10 @@ window.addEventListener('keydown', (e) => {
         sendIpc('shortcut', { key: 'reopen_tab' });
     } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         const key = e.key.toLowerCase();
-        if (key === 't') {
+        if (/^[1-9]$/.test(key)) {
+            e.preventDefault();
+            sendIpc('shortcut', { key: 'tab_' + key });
+        } else if (key === 't') {
             e.preventDefault();
             sendIpc('new_tab', { url: 'browser://newtab' });
         } else if (key === 'w') {

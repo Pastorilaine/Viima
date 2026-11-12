@@ -75,6 +75,9 @@ pub enum AppEvent {
     IpcReopenTab,
     /// true = next tab, false = previous
     IpcCycleTab(bool),
+    /// Ctrl+1..9: 0-based index, usize::MAX = last tab
+    IpcSelectTab(usize),
+    IpcAutocomplete(String),
     IpcFocusOmnibox,
     IpcMinimize,
     IpcMaximize,
@@ -85,6 +88,7 @@ pub enum AppEvent {
     TabTitleChanged(usize, String),
     TabPageLoadStarted(usize, String),
     TabPageLoadFinished(usize, String),
+    TabFavicon(usize, String),
 
     // Background Auto-Updater Events
     UpdateCheckFinished {
@@ -99,6 +103,8 @@ struct UiTabState {
     id: usize,
     title: String,
     url: String,
+    favicon: Option<String>,
+    blocked: u32,
     is_loading: bool,
     can_go_back: bool,
     can_go_forward: bool,
@@ -147,11 +153,23 @@ window.addEventListener('keydown', function (e) {
     let key = null;
     if (k === 'tab') key = e.shiftKey ? 'prev_tab' : 'next_tab';
     else if (e.shiftKey) key = k === 't' ? 'reopen_tab' : null;
-    else key = { t: 'new_tab', w: 'close_tab', l: 'focus_omnibox', h: 'history' }[k];
+    else if (/^[1-9]$/.test(k)) key = 'tab_' + k;
+    else key ={ t: 'new_tab', w: 'close_tab', l: 'focus_omnibox', h: 'history' }[k];
     if (!key) return;
     e.preventDefault();
     window.ipc.postMessage(JSON.stringify({ action: 'shortcut', key }));
 }, true);
+(function () {
+    if (window.top !== window || !/^https?:$/.test(location.protocol)) return;
+    function sendIcon() {
+        if (!window.ipc) return;
+        const l = document.querySelector('link[rel~="icon"]');
+        const url = l && l.href ? l.href : location.origin + '/favicon.ico';
+        window.ipc.postMessage(JSON.stringify({ action: 'favicon', url }));
+    }
+    if (document.readyState === 'complete') sendIcon();
+    else window.addEventListener('load', sendIcon, { once: true });
+})();
 "#;
 
 pub struct BrowserApp {
@@ -214,7 +232,7 @@ impl BrowserApp {
             .with_custom_protocol("browser".into(), Self::handle_protocol)
             .with_ipc_handler(move |req| {
                 if matches!(req.uri().host(), Some("browser.ui")) {
-                    Self::handle_ipc_message(req.body(), &ui_proxy, true);
+                    Self::handle_ipc_message(req.body(), &ui_proxy, true, None);
                 }
             })
             .with_on_page_load_handler(move |event, _| {
@@ -381,11 +399,16 @@ impl BrowserApp {
     }
 
     // Untrusted (web page) senders may only trigger the harmless "shortcut" action.
-    fn handle_ipc_message(body: &str, proxy: &EventLoopProxy<AppEvent>, trusted: bool) {
+    fn handle_ipc_message(
+        body: &str,
+        proxy: &EventLoopProxy<AppEvent>,
+        trusted: bool,
+        tab_id: Option<usize>,
+    ) {
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(body)
             && let Some(action) = v.get("action").and_then(|a| a.as_str())
         {
-            if !trusted && action != "shortcut" {
+            if !trusted && !matches!(action, "shortcut" | "favicon") {
                 return;
             }
             match action {
@@ -398,6 +421,11 @@ impl BrowserApp {
                         Some("reopen_tab") => AppEvent::IpcReopenTab,
                         Some("next_tab") => AppEvent::IpcCycleTab(true),
                         Some("prev_tab") => AppEvent::IpcCycleTab(false),
+                        Some(k) if k.starts_with("tab_") => match k[4..].parse::<usize>() {
+                            Ok(9) => AppEvent::IpcSelectTab(usize::MAX),
+                            Ok(n @ 1..=8) => AppEvent::IpcSelectTab(n - 1),
+                            _ => return,
+                        },
                         _ => return,
                     };
                     let _ = proxy.send_event(event);
@@ -477,6 +505,20 @@ impl BrowserApp {
                 "request_initial_state" => {
                     let _ = proxy.send_event(AppEvent::IpcRequestInitialState);
                 }
+                "autocomplete" => {
+                    if let Some(q) = v.get("q").and_then(|q| q.as_str()) {
+                        let _ = proxy.send_event(AppEvent::IpcAutocomplete(q.to_string()));
+                    }
+                }
+                // Sent by any page (untrusted): only ever shown as an <img> in the tab strip.
+                "favicon" => {
+                    if let (Some(id), Some(url)) = (tab_id, v.get("url").and_then(|u| u.as_str()))
+                        && url.len() <= 2048
+                        && (url.starts_with("https://") || url.starts_with("http://"))
+                    {
+                        let _ = proxy.send_event(AppEvent::TabFavicon(id, url.to_string()));
+                    }
+                }
                 "minimize" => {
                     let _ = proxy.send_event(AppEvent::IpcMinimize);
                 }
@@ -494,7 +536,12 @@ impl BrowserApp {
         }
     }
 
-    fn create_tab_webview(&mut self, id: usize, initial_url: &str) -> WebView {
+    fn create_tab_webview(
+        &mut self,
+        id: usize,
+        initial_url: &str,
+        blocked: Rc<Cell<u32>>,
+    ) -> WebView {
         let rect = self.content_rect();
         let proxy_page_load = self.proxy.clone();
         let proxy_title = self.proxy.clone();
@@ -510,7 +557,7 @@ impl BrowserApp {
             .with_custom_protocol("browser".into(), Self::handle_protocol)
             .with_ipc_handler(move |req| {
                 let trusted = Self::is_trusted_ipc_source(req.uri());
-                Self::handle_ipc_message(req.body(), &proxy_ipc, trusted);
+                Self::handle_ipc_message(req.body(), &proxy_ipc, trusted, Some(id));
             })
             .with_on_page_load_handler(move |event, url| match event {
                 PageLoadEvent::Started => {
@@ -550,7 +597,9 @@ impl BrowserApp {
             .build_as_child(&*self.window)
             .expect("Failed to create tab webview");
         #[cfg(windows)]
-        if let Err(e) = AdBlocker::install_network_filter(&webview, self.adblock_enabled.clone()) {
+        if let Err(e) =
+            AdBlocker::install_network_filter(&webview, self.adblock_enabled.clone(), blocked)
+        {
             eprintln!("adblock network filter unavailable: {e}");
         }
         webview
@@ -570,14 +619,14 @@ impl BrowserApp {
         }
 
         let init_adblock = self.adblock_enabled.get();
-        let webview = self.create_tab_webview(id, &resolved);
-        let tab = Tab::new(
+        let mut tab = Tab::new(
             id,
-            Some(webview),
-            resolved,
+            None,
+            resolved.clone(),
             "Uusi välilehti".to_string(),
             init_adblock,
         );
+        tab.webview = Some(self.create_tab_webview(id, &resolved, tab.blocked.clone()));
         tab.focus();
         self.tabs.push(tab);
         self.active_tab_id = id;
@@ -615,7 +664,8 @@ impl BrowserApp {
         };
         if self.tabs[idx].webview.is_none() {
             let url = self.tabs[idx].url.clone();
-            let webview = self.create_tab_webview(id, &url);
+            let blocked = self.tabs[idx].blocked.clone();
+            let webview = self.create_tab_webview(id, &url, blocked);
             let tab = &mut self.tabs[idx];
             tab.webview = Some(webview);
             tab.init_adblock_enabled = self.adblock_enabled.get();
@@ -699,6 +749,32 @@ impl BrowserApp {
         self.activate(id);
         self.update_ui();
         self.sync_session();
+    }
+
+    pub fn select_tab_index(&mut self, index: usize) {
+        let idx = index.min(self.tabs.len().saturating_sub(1));
+        if let Some(tab) = self.tabs.get(idx) {
+            let id = tab.id;
+            self.switch_tab(id);
+        }
+    }
+
+    pub fn autocomplete(&self, typed: &str) {
+        let suffix = self.storage.autocomplete(typed);
+        if let (Ok(q), Ok(s)) = (serde_json::to_string(typed), serde_json::to_string(&suffix)) {
+            let _ = self.ui_webview.evaluate_script(&format!(
+                "window.onAutocomplete && window.onAutocomplete({q}, {s});"
+            ));
+        }
+    }
+
+    pub fn on_favicon(&mut self, id: usize, url: String) {
+        if let Some(tab) = self.tabs.iter_mut().find(|t| t.id == id)
+            && tab.favicon.as_deref() != Some(url.as_str())
+        {
+            tab.favicon = Some(url);
+            self.update_ui();
+        }
     }
 
     pub fn cycle_tab(&mut self, forward: bool) {
@@ -1157,6 +1233,8 @@ impl BrowserApp {
                     id: t.id,
                     title: t.title.clone(),
                     url: t.url.clone(),
+                    favicon: t.favicon.clone(),
+                    blocked: t.blocked.get(),
                     is_loading: t.is_loading,
                     can_go_back: is_active && t.can_go_back(),
                     can_go_forward: is_active && t.can_go_forward(),

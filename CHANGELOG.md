@@ -5,6 +5,20 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.3.4] - 2026-11-12
+
+### 🌟 Uutta (Added)
+- **Osoiterivin automaattinen täydennys**: Kirjoittaessa osoiteriville selain täydentää tutuimman osoitteen historiasta ja kirjanmerkeistä (esim. `yl` → `yle.fi`). Pelkkä verkkotunnus täydentyy ensin, `/`-merkin jälkeen koko polku.
+- **Sivustojen faviconit välilehdissä**.
+- **Estettyjen pyyntöjen laskuri**: Suojakilpi näyttää, montako mainos- ja seurantapyyntöä nykyisellä sivulla on estetty.
+- **`Ctrl+1`…`Ctrl+8`** siirtyy välilehteen numerolla, **`Ctrl+9`** viimeiseen.
+
+### ⚡ Optimoinnit (Changed)
+- Taustalla olevat välilehdet siirtyvät WebView2:n matalan muistinkäytön tilaan.
+- Selaintiedot tallennetaan tiiviinä JSONina, mikä keventää jokaisen sivulatauksen jälkeistä tallennusta.
+
+---
+
 ## [0.3.3] - 2026-11-12
 
 ### 🌟 Uutta (Added)

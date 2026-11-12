@@ -84,6 +84,7 @@ impl AdBlocker {
     pub fn install_network_filter(
         webview: &wry::WebView,
         enabled: std::rc::Rc<std::cell::Cell<bool>>,
+        blocked: std::rc::Rc<std::cell::Cell<u32>>,
     ) -> windows::core::Result<()> {
         use webview2_com::Microsoft::Web::WebView2::Win32::*;
         use webview2_com::{WebResourceRequestedEventHandler, take_pwstr};
@@ -118,6 +119,7 @@ impl AdBlocker {
                         let resp =
                             env.CreateWebResourceResponse(None, 403, w!("Blocked"), w!(""))?;
                         args.SetResponse(&resp)?;
+                        blocked.set(blocked.get().saturating_add(1));
                     }
                     Ok(())
                 })),

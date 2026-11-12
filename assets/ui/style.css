@@ -202,6 +202,13 @@ body {
     color: var(--accent);
 }
 
+.tab-icon img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    border-radius: 3px;
+}
+
 .tab-title {
     flex: 1;
     white-space: nowrap;

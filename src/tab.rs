@@ -1,9 +1,14 @@
-use wry::{Rect, WebView};
+use std::cell::Cell;
+use std::rc::Rc;
+use wry::{MemoryUsageLevel, Rect, WebView, WebViewExtWindows};
 
 pub struct Tab {
     pub id: usize,
     pub title: String,
     pub url: String,
+    pub favicon: Option<String>,
+    /// Requests blocked on the current page; bumped by the network filter, reset on navigation.
+    pub blocked: Rc<Cell<u32>>,
     pub is_loading: bool,
     pub init_adblock_enabled: bool,
     /// `None` = restored tab not opened yet; created on first activation to keep startup light.
@@ -31,6 +36,8 @@ impl Tab {
             id,
             title,
             url,
+            favicon: None,
+            blocked: Rc::default(),
             is_loading: false,
             init_adblock_enabled,
             webview,
@@ -53,6 +60,8 @@ impl Tab {
     pub fn on_page_started(&mut self, url: &str) {
         self.is_loading = true;
         self.url = url.to_string();
+        self.favicon = None;
+        self.blocked.set(0);
     }
 
     pub fn on_page_finished(&mut self, url: &str) {
@@ -106,15 +115,20 @@ impl Tab {
         }
     }
 
+    /// Hidden tabs drop to low memory mode so WebView2 can trim their caches.
     pub fn set_visible(&self, visible: bool) {
         if let Some(w) = &self.webview {
             let _ = w.set_visible(visible);
+            let _ = w.set_memory_usage_level(if visible {
+                MemoryUsageLevel::Normal
+            } else {
+                MemoryUsageLevel::Low
+            });
         }
     }
 
     pub fn set_theme(&self, theme: wry::Theme) {
         if let Some(w) = &self.webview {
-            use wry::WebViewExtWindows;
             let _ = w.set_theme(theme);
         }
     }

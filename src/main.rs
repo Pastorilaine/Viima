@@ -141,6 +141,15 @@ fn main() {
                 AppEvent::IpcCycleTab(forward) => {
                     browser.cycle_tab(forward);
                 }
+                AppEvent::IpcSelectTab(index) => {
+                    browser.select_tab_index(index);
+                }
+                AppEvent::IpcAutocomplete(typed) => {
+                    browser.autocomplete(&typed);
+                }
+                AppEvent::TabFavicon(id, url) => {
+                    browser.on_favicon(id, url);
+                }
                 AppEvent::IpcFocusOmnibox => {
                     browser.focus_omnibox();
                 }

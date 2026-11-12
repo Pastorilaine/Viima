@@ -215,7 +215,8 @@ fn spawn_writer(
                 snapshot = newer;
             }
             let tmp = path.with_extension("json.tmp");
-            let result = serde_json::to_string_pretty(&snapshot)
+            // Compact JSON: this runs on every navigation, pretty-printing roughly doubles the work.
+            let result = serde_json::to_string(&snapshot)
                 .map_err(std::io::Error::other)
                 .and_then(|json| fs::write(&tmp, json).and_then(|_| fs::rename(&tmp, &path)));
             if let Ok(mut slot) = write_error.lock() {
@@ -383,6 +384,61 @@ impl StorageManager {
             self.data.history.truncate(500);
         }
         self.save();
+    }
+
+    /// Inline omnibox completion: returns the text to append to `typed`, taken from the most
+    /// visited matching bookmark/history URL (shown without scheme and `www.`).
+    /// Typing just a host completes to the host; once a `/` is typed, full paths are offered.
+    pub fn autocomplete(&self, typed: &str) -> Option<String> {
+        if typed.len() < 2 || typed.chars().any(char::is_whitespace) {
+            return None;
+        }
+        let want_path = typed.contains('/');
+        let mut scores: std::collections::HashMap<String, u32> = Default::default();
+        let candidates = self
+            .data
+            .bookmarks
+            .iter()
+            .map(|b| (b.url.as_str(), 5))
+            .chain(
+                self.data
+                    .history
+                    .iter()
+                    .map(|h| (h.url.as_str(), h.visit_count)),
+            );
+        for (url, weight) in candidates {
+            let Ok(parsed) = url::Url::parse(url) else {
+                continue;
+            };
+            if !matches!(parsed.scheme(), "http" | "https") {
+                continue;
+            }
+            let Some(host) = parsed.host_str() else {
+                continue;
+            };
+            let host = host.strip_prefix("www.").unwrap_or(host);
+            let cand = if want_path {
+                let mut s = format!("{host}{}", parsed.path());
+                if let Some(q) = parsed.query() {
+                    s.push('?');
+                    s.push_str(q);
+                }
+                s.trim_end_matches('/').to_string()
+            } else {
+                host.to_string()
+            };
+            if cand.len() > typed.len()
+                && cand.is_char_boundary(typed.len())
+                && cand[..typed.len()].eq_ignore_ascii_case(typed)
+            {
+                *scores.entry(cand).or_default() += weight;
+            }
+        }
+        scores
+            .into_iter()
+            // Highest score wins; on a tie the shorter (more general) URL.
+            .max_by(|(a, sa), (b, sb)| sa.cmp(sb).then(b.len().cmp(&a.len())))
+            .map(|(cand, _)| cand[typed.len()..].to_string())
     }
 
     /// Page titles usually arrive after the load-finished event that created the history entry.
@@ -587,6 +643,40 @@ mod tests {
         let back: BrowserData =
             serde_json::from_str(&serde_json::to_string(&data).unwrap()).unwrap();
         assert_eq!(back.session, data.session);
+    }
+
+    #[test]
+    fn test_autocomplete() {
+        let mut storage = StorageManager {
+            data: BrowserData::default(),
+            last_error: None,
+            tx: None,
+            writer: None,
+            write_error: Default::default(),
+        };
+        // Default bookmarks include https://yle.fi/uutiset and https://www.youtube.com
+        assert_eq!(storage.autocomplete("yl").as_deref(), Some("e.fi"));
+        assert_eq!(storage.autocomplete("YO").as_deref(), Some("utube.com"));
+        assert_eq!(storage.autocomplete("yle.fi/").as_deref(), Some("uutiset"));
+        assert_eq!(storage.autocomplete("y"), None); // too short
+        assert_eq!(storage.autocomplete("yle.fi"), None); // already complete
+        assert_eq!(storage.autocomplete("rust lang"), None); // search query
+
+        // More visits outrank a bookmark on the same prefix.
+        for _ in 0..3 {
+            storage.data.history.push(HistoryItem {
+                id: "h".into(),
+                title: "Ylioppilastutkinto".into(),
+                url: "https://ylioppilastutkinto.fi/".into(),
+                visited_at: 0,
+                visit_count: 4,
+            });
+        }
+        assert_eq!(
+            storage.autocomplete("yl").as_deref(),
+            Some("ioppilastutkinto.fi")
+        );
+        assert_eq!(storage.autocomplete("yle").as_deref(), Some(".fi"));
     }
 
     #[test]
