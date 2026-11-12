@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asetukset — Viima</title>
+    <link rel="icon" type="image/png" href="viima-logo.png">
+    <style>
+        :root {
+            --bg-page: #0f1117;
+            --bg-card: #181b24;
+            --bg-card-hover: #1f232e;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --border-card: rgba(255, 255, 255, 0.08);
+            --danger: #ef4444;
+            --success: #10b981;
+            --bg-control: #252934;
+            --bg-control-hover: #333846;
+            --slider-off: #334155;
+            --row-border: rgba(255, 255, 255, 0.05);
+            color-scheme: dark;
+        }
+
+        :root[data-theme="light"] {
+            --bg-page: #eef1f6;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f4f7fb;
+            --text-main: #0f172a;
+            --text-dim: #52607a;
+            --accent: #0284c7;
+            --border-card: rgba(15, 23, 42, 0.1);
+            --danger: #dc2626;
+            --success: #059669;
+            --bg-control: #eceff3;
+            --bg-control-hover: #dfe3e9;
+            --slider-off: #cbd5e1;
+            --row-border: rgba(15, 23, 42, 0.07);
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border-card);
+            padding-bottom: 18px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--row-border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .setting-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-desc {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        select.custom-select {
+            background: var(--bg-control);
+            color: var(--text-main);
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select.custom-select:focus {
+            border-color: var(--accent);
+        }
+
+        /* Toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--slider-off);
+            transition: .2s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .btn-action {
+            background: var(--bg-control);
+            color: var(--text-main);
+            border: 1px solid var(--border-card);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--bg-control-hover);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .info-pill {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #0b1120;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent);
+            filter: brightness(1.08);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .update-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg-control);
+            color: var(--text-muted);
+        }
+
+        .status-pill.is-ok {
+            background: rgba(16, 185, 129, 0.14);
+            color: #10b981;
+        }
+
+        .status-pill.is-available {
+            background: rgba(59, 130, 246, 0.16);
+            color: #60a5fa;
+        }
+
+        .status-pill.is-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .update-url-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 440px;
+        }
+
+        .custom-input {
+            flex: 1;
+            background: var(--bg-control);
+            color: var(--text-main);
+            border: 1px solid var(--border-card);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            outline: none;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+
+        .custom-input:focus {
+            border-color: var(--accent);
+        }
+
+        .update-notes {
+            margin-top: 6px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            white-space: pre-line;
+            max-width: 520px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <h1>Selaimen asetukset</h1>
+        </div>
+
+        <!-- Hakuasetukset -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Haku & Osoiterivi</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Oletushakukone</span>
+                    <span class="setting-desc">Käytetään osoiterivin ja aloitussivun hakukyselyissä</span>
+                </div>
+                <select class="custom-select" id="selectSearchEngine">
+                    <option value="google" selected>Google (Oletus)</option>
+                    <option value="duckduckgo">DuckDuckGo (Yksityinen)</option>
+                    <option value="bing">Microsoft Bing</option>
+                    <option value="wikipedia">Wikipedia (Suomi)</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Pikahaut (Bang-komennot)</span>
+                    <span class="setting-desc">Voit hakea suoraan esim: <code>!g rust</code>, <code>!yt video</code>, <code>!w suomi</code>, <code>!gh linux</code></span>
+                </div>
+                <span class="info-pill">Aina käytössä</span>
+            </div>
+        </div>
+
+        <!-- Ulkoasu -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span>Ulkoasu</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Tumma teema</span>
+                    <span class="setting-desc">Vaihda selaimen ja sisäsivujen teema tumman ja vaalean välillä</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="toggleTheme" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Turvallisuus ja yksityisyys -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Turvallisuus & Suojaus</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Mainosten ja seurantainjektioiden esto</span>
+                    <span class="setting-desc">Estää tunnetut mainosverkot, analytiikkaseuraimet ja ponnahdusikkunat</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="toggleAdblock" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Tyhjennä selaushistoria</span>
+                    <span class="setting-desc">Poistaa kaikki paikallisesti tallennetut selaustiedot</span>
+                </div>
+                <button class="btn-action btn-danger" id="btnClearHistory">Tyhjennä historia</button>
+            </div>
+        </div>
+
+        <!-- Päivitykset -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Päivitykset</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Sovelluksen päivitystila (v{{VERSION}})</span>
+                    <span class="setting-desc" id="updateStatusDesc">Tarkista saatavilla olevat päivitykset GitHub-julkaisuista.</span>
+                    <div class="update-notes" id="updateNotes" hidden></div>
+                </div>
+                <div class="update-controls">
+                    <span class="status-pill" id="updateStatusPill">Valmis</span>
+                    <button class="btn-action btn-primary" id="btnUpdateAction">Tarkista päivitykset</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Automaattiset päivitykset</span>
+                    <span class="setting-desc">Lataa uudet versiot taustalla käynnistyksen yhteydessä (asennettu versio).</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="toggleAutoUpdate" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Päivityslähde (HTTPS URL)</span>
+                    <span class="setting-desc">Osoite `latest.json`-tiedostoon tai GitHub Releases API:in</span>
+                </div>
+                <div class="update-url-group">
+                    <input type="url" class="custom-input" id="inputUpdateUrl" placeholder="https://github.com/.../latest.json">
+                    <button class="btn-action" id="btnSaveUpdateUrl">Tallenna</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tietoja selaimesta -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Tietoja sovelluksesta</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info" style="flex-direction: row; align-items: center; gap: 12px;">
+                    <img src="viima-logo.png" alt="Viima" style="width: 36px; height: 36px; border-radius: 9px; object-fit: cover;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <span class="setting-label">Viima</span>
+                        <span class="setting-desc">Versio {{VERSION}} • IT-Veljekset Group</span>
+                    </div>
+                </div>
+                <span class="info-pill">Rust 2024 + WebView2</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Pikanäppäimet</span>
+                    <span class="setting-desc">Ctrl+T: Uusi välilehti • Ctrl+W: Sulje välilehti • Ctrl+R: Päivitä • Ctrl+L: Osoiterivi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const selectSearchEngine = document.getElementById('selectSearchEngine');
+        const toggleAdblock = document.getElementById('toggleAdblock');
+        const toggleTheme = document.getElementById('toggleTheme');
+        const btnClearHistory = document.getElementById('btnClearHistory');
+        const toggleAutoUpdate = document.getElementById('toggleAutoUpdate');
+        const inputUpdateUrl = document.getElementById('inputUpdateUrl');
+        const btnSaveUpdateUrl = document.getElementById('btnSaveUpdateUrl');
+        const btnUpdateAction = document.getElementById('btnUpdateAction');
+        const updateStatusPill = document.getElementById('updateStatusPill');
+        const updateStatusDesc = document.getElementById('updateStatusDesc');
+        const updateNotesEl = document.getElementById('updateNotes');
+
+        let latestUpdateState = 'idle';
+
+        // Post message to top frame if available
+        function notifyParent(action, payload = {}) {
+            if (window.ipc && window.ipc.postMessage) {
+                window.ipc.postMessage(JSON.stringify({ action, ...payload }));
+            }
+        }
+
+        function renderUpdateState(upd) {
+            if (!upd) return;
+            latestUpdateState = upd.state || 'idle';
+
+            updateStatusPill.classList.remove('is-ok', 'is-available', 'is-error');
+            btnUpdateAction.disabled = false;
+            updateNotesEl.hidden = true;
+            updateNotesEl.textContent = '';
+
+            const verLabel = upd.latest_version ? `v${upd.latest_version}` : '';
+            if (latestUpdateState === 'checking') {
+                updateStatusPill.textContent = 'Tarkistetaan...';
+                updateStatusDesc.textContent = 'Otetaan yhteyttä päivityspalvelimeen...';
+                btnUpdateAction.textContent = 'Tarkistetaan...';
+                btnUpdateAction.disabled = true;
+            } else if (latestUpdateState === 'up_to_date') {
+                updateStatusPill.textContent = 'Ajan tasalla';
+                updateStatusPill.classList.add('is-ok');
+                updateStatusDesc.textContent = `Viima v${upd.current_version} on uusin julkaistu versio.`;
+                btnUpdateAction.textContent = 'Tarkista uudelleen';
+            } else if (latestUpdateState === 'available') {
+                updateStatusPill.textContent = `Saatavilla ${verLabel}`;
+                updateStatusPill.classList.add('is-available');
+                updateStatusDesc.textContent = upd.can_self_update
+                    ? `Uusi versio ${verLabel} on saatavilla.`
+                    : `Uusi versio ${verLabel} saatavilla (itse-päivitys vaatii asennetun version).`;
+                btnUpdateAction.textContent = 'Lataa päivitys';
+                btnUpdateAction.disabled = !upd.can_self_update;
+                if (upd.release_notes) {
+                    updateNotesEl.textContent = upd.release_notes;
+                    updateNotesEl.hidden = false;
+                }
+            } else if (latestUpdateState === 'downloading') {
+                updateStatusPill.textContent = 'Ladataan...';
+                updateStatusPill.classList.add('is-available');
+                updateStatusDesc.textContent = `Ladataan ja varmistetaan versiota ${verLabel}...`;
+                btnUpdateAction.textContent = 'Ladataan...';
+                btnUpdateAction.disabled = true;
+            } else if (latestUpdateState === 'ready') {
+                updateStatusPill.textContent = `Valmis ${verLabel}`;
+                updateStatusPill.classList.add('is-ok');
+                updateStatusDesc.textContent = `Versio ${verLabel} on ladattu ja vahvistettu. Käynnistä uudelleen asentaaksesi.`;
+                btnUpdateAction.textContent = 'Käynnistä uudelleen ja päivitä';
+                if (upd.release_notes) {
+                    updateNotesEl.textContent = upd.release_notes;
+                    updateNotesEl.hidden = false;
+                }
+            } else if (latestUpdateState === 'error') {
+                updateStatusPill.textContent = 'Virhe';
+                updateStatusPill.classList.add('is-error');
+                updateStatusDesc.textContent = upd.error || 'Päivityksen tarkistus epäonnistui.';
+                btnUpdateAction.textContent = 'Yritä uudelleen';
+            } else {
+                updateStatusPill.textContent = upd.can_self_update ? 'Valmis' : 'Kehitystila';
+                updateStatusDesc.textContent = upd.can_self_update
+                    ? 'Tarkista saatavilla olevat päivitykset.'
+                    : 'Tarkistus toimii; automaattinen korvaus aktivoituu asennetussa versiossa.';
+                btnUpdateAction.textContent = 'Tarkista päivitykset';
+            }
+        }
+
+        window.onBrowserStateUpdate = state => {
+            if (state.settings) {
+                document.documentElement.dataset.theme = state.settings.dark_mode ? 'dark' : 'light';
+                selectSearchEngine.value = state.settings.search_engine || 'google';
+                toggleAdblock.checked = Boolean(state.settings.adblock_enabled);
+                toggleTheme.checked = Boolean(state.settings.dark_mode);
+                toggleAutoUpdate.checked = Boolean(state.settings.auto_update_enabled);
+                if (document.activeElement !== inputUpdateUrl && typeof state.settings.update_url === 'string') {
+                    inputUpdateUrl.value = state.settings.update_url;
+                }
+            }
+            if (state.update) {
+                renderUpdateState(state.update);
+            }
+        };
+
+        toggleTheme.addEventListener('change', () => notifyParent('toggle_theme'));
+
+        selectSearchEngine.addEventListener('change', () => {
+            notifyParent('set_search_engine', { engine: selectSearchEngine.value });
+        });
+
+        toggleAdblock.addEventListener('change', () => {
+            notifyParent('toggle_adblock');
+        });
+
+        toggleAutoUpdate.addEventListener('change', () => {
+            notifyParent('toggle_auto_update');
+        });
+
+        btnSaveUpdateUrl.addEventListener('click', () => {
+            const url = inputUpdateUrl.value.trim();
+            if (url) {
+                notifyParent('set_update_url', { url });
+            }
+        });
+
+        btnUpdateAction.addEventListener('click', () => {
+            if (latestUpdateState === 'ready') {
+                notifyParent('install_update');
+            } else if (latestUpdateState === 'available') {
+                notifyParent('download_update');
+            } else {
+                notifyParent('check_updates');
+            }
+        });
+
+        btnClearHistory.addEventListener('click', () => {
+            if (confirm("Haluatko varmasti tyhjentää koko selaushistorian?")) {
+                notifyParent('clear_history');
+            }
+        });
+
+        notifyParent('request_initial_state');
+    </script>
+</body>
+</html>

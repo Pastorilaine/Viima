@@ -1,0 +1,75 @@
+name: Build & Release Viima
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Julkaisun tagi (esim. v0.3.0)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Windows Release & Setup
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Tests & Clippy
+        run: |
+          cargo test
+          cargo clippy --all-targets -- -D warnings
+
+      - name: Build Release Binaries & Setup Packages
+        shell: pwsh
+        run: |
+          .\scripts\build_release.ps1
+
+      - name: Determine Release Tag
+        id: vars
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and $env:INPUT_TAG_NAME) {
+            $tag = $env:INPUT_TAG_NAME
+          }
+          if (-not $tag -or $tag -eq 'main' -or $tag -eq 'master') {
+            $manifest = Get-Content "releases\latest\latest.json" | ConvertFrom-Json
+            $tag = "v$($manifest.version)"
+          }
+          Write-Host "Tag: $tag"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Viima ${{ steps.vars.outputs.tag }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          files: |
+            releases/latest/OmaSelain-Setup.exe
+            releases/latest/OmaSelain.exe
+            releases/latest/latest.json
+            releases/latest/OmaSelain_*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

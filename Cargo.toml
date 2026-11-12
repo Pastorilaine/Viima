@@ -1,0 +1,46 @@
+[package]
+name = "oma_selain"
+version = "0.3.0"
+edition = "2024"
+default-run = "oma_selain"
+build = "build.rs"
+
+[[bin]]
+name = "oma_selain"
+path = "src/main.rs"
+
+[[bin]]
+name = "oma_selain_setup"
+path = "src/bin/setup.rs"
+
+[dependencies]
+directories = "6.0.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.10.9"
+tao = "0.37.2"
+ureq = "3"
+url = "2.5.8"
+wry = "0.57.1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Controls",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true

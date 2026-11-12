@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirjanmerkit — Viima</title>
+    <link rel="icon" type="image/png" href="viima-logo.png">
+    <style>
+        :root {
+            --bg-page: #0f1117;
+            --bg-card: #181b24;
+            --bg-card-hover: #212532;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --border-card: rgba(255, 255, 255, 0.08);
+            --star-gold: #f59e0b;
+            color-scheme: dark;
+        }
+
+        :root[data-theme="light"] {
+            --bg-page: #eef1f6;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f4f7fb;
+            --text-main: #0f172a;
+            --text-dim: #52607a;
+            --accent: #0284c7;
+            --border-card: rgba(15, 23, 42, 0.1);
+            --star-gold: #d97706;
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-card);
+            padding-bottom: 16px;
+        }
+
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .bookmarks-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .bookmark-card { min-width: 0; }
+        .bookmark-main { display: block; flex: 1; min-width: 0; color: inherit; text-decoration: none; overflow: hidden; }
+        .bookmark-remove { border: 0; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+        .bookmark-remove:hover { color: #ef4444; }
+        .empty-state { grid-column: 1 / -1; padding: 32px; text-align: center; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; }
+
+        @media (max-width: 640px) {
+            .bookmarks-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .bookmark-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: all 0.15s ease;
+        }
+
+        .bookmark-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(56, 189, 248, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .bookmark-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(245, 158, 11, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--star-gold);
+        }
+
+        .bookmark-info {
+            overflow: hidden;
+        }
+
+        .bookmark-title {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bookmark-url {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--star-gold)" stroke="var(--star-gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <h1 class="title">Kirjanmerkit</h1>
+            </div>
+        </div>
+        <div class="bookmarks-grid" id="bookmarksGrid"></div>
+    </div>
+    <script>
+        const grid = document.getElementById('bookmarksGrid');
+        window.onBrowserStateUpdate = state => {
+            if (state.settings && typeof state.settings.dark_mode === 'boolean') {
+                document.documentElement.dataset.theme = state.settings.dark_mode ? 'dark' : 'light';
+            }
+            grid.replaceChildren();
+            const bookmarks = state.bookmarks || [];
+            if (!bookmarks.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Kirjanmerkkejä ei ole vielä tallennettu.';
+                grid.appendChild(empty);
+                return;
+            }
+            for (const item of bookmarks) {
+                const card = document.createElement('div');
+                card.className = 'bookmark-card';
+                const icon = document.createElement('div');
+                icon.className = 'bookmark-icon';
+                icon.textContent = '★';
+                const link = document.createElement('a');
+                link.className = 'bookmark-main';
+                link.href = item.url;
+                const title = document.createElement('div');
+                title.className = 'bookmark-title';
+                title.textContent = item.title || item.url;
+                const url = document.createElement('div');
+                url.className = 'bookmark-url';
+                url.textContent = item.url;
+                link.append(title, url);
+                const remove = document.createElement('button');
+                remove.className = 'bookmark-remove';
+                remove.type = 'button';
+                remove.title = 'Poista kirjanmerkki';
+                remove.textContent = '×';
+                remove.addEventListener('click', () => window.ipc?.postMessage(JSON.stringify({ action: 'remove_bookmark', url: item.url })));
+                card.append(icon, link, remove);
+                grid.appendChild(card);
+            }
+        };
+        window.ipc?.postMessage(JSON.stringify({ action: 'request_initial_state' }));
+    </script>
+</body>
+</html>
