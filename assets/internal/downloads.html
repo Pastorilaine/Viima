@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="dl.page_title">Lataukset — Viima</title>
+    <link rel="icon" type="image/png" href="viima-logo.png">
+    <style>
+        :root {
+            --bg-page: #0f1117;
+            --bg-card: #181b24;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --border-card: rgba(255, 255, 255, 0.08);
+            --bg-control: #252934;
+            --bg-control-hover: #333846;
+            --track: rgba(255, 255, 255, 0.08);
+            --danger: #ef4444;
+            --success: #10b981;
+            color-scheme: dark;
+        }
+        :root[data-theme="light"] {
+            --bg-page: #eef1f6;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-dim: #52607a;
+            --accent: #0284c7;
+            --border-card: rgba(15, 23, 42, 0.1);
+            --bg-control: #eceff3;
+            --bg-control-hover: #dfe3e9;
+            --track: rgba(15, 23, 42, 0.08);
+            --danger: #dc2626;
+            --success: #059669;
+            color-scheme: light;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-page); color: var(--text-main); padding: 40px 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px solid var(--border-card); padding-bottom: 16px; }
+        .header-title-box { display: flex; align-items: center; gap: 12px; }
+        h1 { font-size: 24px; font-weight: 600; }
+        .list { display: flex; flex-direction: column; gap: 8px; }
+        .item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; }
+        .file-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .info { flex: 1; min-width: 0; }
+        .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .name.done { cursor: pointer; }
+        .name.done:hover { color: var(--accent); }
+        .meta { font-size: 12px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .meta.error { color: var(--danger); }
+        .bar { height: 4px; border-radius: 2px; background: var(--track); margin-top: 8px; overflow: hidden; }
+        .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+        .bar.indeterminate > div { width: 30%; animation: slide 1.2s linear infinite; }
+        @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+        .actions { display: flex; gap: 6px; flex-shrink: 0; }
+        button { background: var(--bg-control); color: var(--text-main); border: 1px solid var(--border-card); padding: 6px 12px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
+        button:hover { background: var(--bg-control-hover); }
+        button.icon { padding: 6px 9px; color: var(--text-dim); }
+        button.icon:hover { color: var(--danger); }
+        .empty { padding: 50px 20px; text-align: center; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M5 21h14"></path>
+                </svg>
+                <h1 data-i18n="dl.title">Lataukset</h1>
+            </div>
+            <button id="btnClear" data-i18n="dl.clear">Tyhjennä lista</button>
+        </div>
+        <div class="list" id="list"></div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script>
+        const listEl = document.getElementById('list');
+        const send = (action, payload = {}) => window.ipc?.postMessage(JSON.stringify({ action, ...payload }));
+
+        function size(bytes) {
+            if (bytes < 0) return '?';
+            const units = ['t', 'kt', 'Mt', 'Gt'];
+            const unitsEn = ['B', 'KB', 'MB', 'GB'];
+            let i = 0, v = bytes;
+            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+            const n = i === 0 ? String(v) : v.toFixed(v < 10 ? 1 : 0);
+            return `${n} ${(window.viimaLang === 'en' ? unitsEn : units)[i]}`;
+        }
+
+        function button(label, op, id, cls) {
+            const b = document.createElement('button');
+            b.textContent = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', () => send('download_action', { op, id }));
+            return b;
+        }
+
+        window.onBrowserStateUpdate = state => {
+            if (state.settings) document.documentElement.dataset.theme = state.settings.dark_mode ? 'dark' : 'light';
+            if (!state.downloads) return;
+            listEl.replaceChildren();
+            if (!state.downloads.length) {
+                const e = document.createElement('div');
+                e.className = 'empty';
+                e.textContent = t('dl.empty', 'Ei latauksia. Ladatut tiedostot tallentuvat Lataukset-kansioon.');
+                listEl.appendChild(e);
+                return;
+            }
+            for (const d of state.downloads) {
+                const row = document.createElement('div');
+                row.className = 'item';
+                const ext = (d.file_name.split('.').pop() || '').slice(0, 4);
+                const icon = document.createElement('div');
+                icon.className = 'file-icon';
+                icon.textContent = ext && ext !== d.file_name ? ext : '⬇';
+
+                const info = document.createElement('div');
+                info.className = 'info';
+                const name = document.createElement('div');
+                name.className = 'name' + (d.state === 'completed' ? ' done' : '');
+                name.textContent = d.file_name || d.url;
+                name.title = d.path || d.url;
+                if (d.state === 'completed') name.addEventListener('click', () => send('download_action', { op: 'open', id: d.id }));
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                info.append(name, meta);
+                if (d.state === 'in_progress') {
+                    const pct = d.total > 0 ? Math.floor(d.received * 100 / d.total) : -1;
+                    meta.textContent = d.total > 0
+                        ? `${size(d.received)} / ${size(d.total)} · ${pct}%`
+                        : size(d.received);
+                    const bar = document.createElement('div');
+                    bar.className = 'bar' + (pct < 0 ? ' indeterminate' : '');
+                    const fill = document.createElement('div');
+                    if (pct >= 0) fill.style.width = pct + '%';
+                    bar.appendChild(fill);
+                    info.appendChild(bar);
+                    actions.append(button(t('dl.cancel', 'Peruuta'), 'cancel', d.id));
+                } else if (d.state === 'completed') {
+                    meta.textContent = `${size(d.total > 0 ? d.total : d.received)} · ${new URL(d.url, location.href).hostname || ''}`;
+                    actions.append(
+                        button(t('dl.open', 'Avaa'), 'open', d.id),
+                        button(t('dl.show', 'Näytä kansiossa'), 'show', d.id),
+                    );
+                } else {
+                    meta.textContent = t('dl.failed', 'Keskeytyi tai peruttiin');
+                    meta.classList.add('error');
+                    actions.append(button(t('dl.retry', 'Yritä uudelleen'), 'retry', d.id));
+                }
+                if (d.state !== 'in_progress') {
+                    const remove = button('✕', 'remove', d.id, 'icon');
+                    remove.title = t('dl.remove', 'Poista listalta');
+                    actions.append(remove);
+                }
+                row.append(icon, info, actions);
+                listEl.appendChild(row);
+            }
+        };
+        document.getElementById('btnClear').addEventListener('click', () => send('clear_downloads'));
+        send('request_initial_state');
+    </script>
+</body>
+</html>

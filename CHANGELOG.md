@@ -5,6 +5,33 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.4.0] - 2026-11-13
+
+### 🌟 Uutta (Added)
+- **Lataukset**: Oma lataushallinta ja `browser://downloads` (`Ctrl+J`) — edistyminen, peruutus, uudelleenyritys, avaa / näytä kansiossa. Työkalurivin latausnappi näyttää edistymisen.
+- **Sivulta haku** (`Ctrl+F`, `F3`, `Shift+Enter`) osumalaskurilla.
+- **Zoom** (`Ctrl +/-/0`, `Ctrl+rulla`) muistaa tason sivustokohtaisesti.
+- **Komentorivin URL ja yksi instanssi**: `viima.exe https://...` tai tiedostopolku avautuu jo käynnissä olevaan ikkunaan.
+- **Oletusselaimeksi rekisteröinti** asetuksista.
+- **Välilehdet**: vedä ja pudota, oikean napin valikko (kiinnitä, mykistä, monista, sulje muut / oikealla olevat), kiinnitetyt välilehdet, ääni-ilmaisin ja mykistys.
+- **Kirjanmerkkipalkki** (`Ctrl+Shift+B`), kirjanmerkkikansiot, `Ctrl+D` lisää kirjanmerkin.
+- **Kirjanmerkkien tuonti ja vienti** HTML-muodossa (Chrome / Firefox / Edge).
+- **Yksityinen ikkuna** (`Ctrl+Shift+N`): erillinen prosessi, väliaikainen profiili poistetaan sulkiessa, historia ei tallennu.
+- **Mainosesto v2**: EasyList-, EasyPrivacy- ja Peter Lowe -listat (päivittyvät viikoittain), evästebannerien piilotus.
+- **Sivustokohtainen sallintalista** ja estettyjen pyyntöjen erittely (mainokset / seurannat / skriptit) suojakilven valikossa.
+- **Vain HTTPS -tila** varoitussivulla, kun sivusto ei tue HTTPS:ää.
+- **Sivustotietojen tyhjennys**: evästeet ja tallennustila sivustokohtaisesti.
+- **Snap Layouts** maksimointinapin päällä, **Jump List** tehtäväpalkissa.
+- **DevTools** (`F12`, kytkin asetuksissa) ja **tulostus** (`Ctrl+P`).
+- **Kieli**: suomi / englanti.
+- **Uinuvat välilehdet**: 30 min käyttämättä olleet välilehdet vapauttavat muistinsa.
+
+### ⚡ Muutokset (Changed)
+- Historia siirtyi SQLite-tietokantaan (FTS5-haku). Vanha historia siirretään automaattisesti.
+- Sovelluksen koodi jaettu moduuleihin.
+
+---
+
 ## [0.3.4] - 2026-11-12
 
 ### 🌟 Uutta (Added)

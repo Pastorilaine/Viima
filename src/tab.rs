@@ -1,5 +1,7 @@
-use std::cell::Cell;
+use crate::adblock::BlockedCounts;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::time::Instant;
 use wry::{MemoryUsageLevel, Rect, WebView, WebViewExtWindows};
 
 pub struct Tab {
@@ -8,16 +10,25 @@ pub struct Tab {
     pub url: String,
     pub favicon: Option<String>,
     /// Requests blocked on the current page; bumped by the network filter, reset on navigation.
-    pub blocked: Rc<Cell<u32>>,
+    pub blocked: Rc<Cell<BlockedCounts>>,
+    /// Ad blocking is switched off for the site currently shown (per-site allowlist).
+    pub site_allowed: Rc<Cell<bool>>,
+    /// http:// URL that HTTPS-only mode rewrote to https:// (for the failure fallback).
+    pub https_upgraded: Rc<RefCell<Option<String>>>,
     pub is_loading: bool,
-    pub init_adblock_enabled: bool,
-    /// `None` = restored tab not opened yet; created on first activation to keep startup light.
+    pub pinned: bool,
+    pub muted: bool,
+    pub playing_audio: bool,
+    pub zoom: f64,
+    /// When the tab was last shown; idle background tabs are put to sleep.
+    pub last_active: Instant,
+    /// `None` = not loaded (restored lazily or put to sleep); created on activation.
     pub webview: Option<WebView>,
 }
 
 /// WebView2 can't navigate to custom schemes directly; wry serves `browser://x` as
 /// `http://browser.x`. `with_url` converts at build time but `load_url` does not.
-fn to_webview_url(url: &str) -> String {
+pub fn to_webview_url(url: &str) -> String {
     match url.strip_prefix("browser://") {
         Some(rest) => format!("http://browser.{rest}"),
         None => url.to_string(),
@@ -25,22 +36,22 @@ fn to_webview_url(url: &str) -> String {
 }
 
 impl Tab {
-    pub fn new(
-        id: usize,
-        webview: Option<WebView>,
-        url: String,
-        title: String,
-        init_adblock_enabled: bool,
-    ) -> Self {
+    pub fn new(id: usize, url: String, title: String) -> Self {
         Self {
             id,
             title,
             url,
             favicon: None,
             blocked: Rc::default(),
+            site_allowed: Rc::default(),
+            https_upgraded: Rc::default(),
             is_loading: false,
-            init_adblock_enabled,
-            webview,
+            pinned: false,
+            muted: false,
+            playing_audio: false,
+            zoom: 1.0,
+            last_active: Instant::now(),
+            webview: None,
         }
     }
 
@@ -61,7 +72,7 @@ impl Tab {
         self.is_loading = true;
         self.url = url.to_string();
         self.favicon = None;
-        self.blocked.set(0);
+        self.blocked.set(BlockedCounts::default());
     }
 
     pub fn on_page_finished(&mut self, url: &str) {
@@ -109,6 +120,16 @@ impl Tab {
         }
     }
 
+    pub fn set_zoom(&mut self, factor: f64) {
+        if (self.zoom - factor).abs() < 0.001 {
+            return;
+        }
+        self.zoom = factor;
+        if let Some(w) = &self.webview {
+            let _ = w.zoom(factor);
+        }
+    }
+
     pub fn set_bounds(&self, bounds: Rect) {
         if let Some(w) = &self.webview {
             let _ = w.set_bounds(bounds);
@@ -138,6 +159,14 @@ impl Tab {
             let _ = w.focus();
         }
     }
+
+    /// Unloads the page to free memory; title, URL and favicon stay for the tab strip.
+    pub fn discard(&mut self) {
+        if self.webview.take().is_some() {
+            self.is_loading = false;
+            self.playing_audio = false;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -149,6 +178,10 @@ mod tests {
         assert_eq!(
             to_webview_url("browser://history"),
             "http://browser.history"
+        );
+        assert_eq!(
+            to_webview_url("browser://insecure?url=http%3A%2F%2Fx.fi"),
+            "http://browser.insecure?url=http%3A%2F%2Fx.fi"
         );
         assert_eq!(to_webview_url("https://yle.fi"), "https://yle.fi");
     }

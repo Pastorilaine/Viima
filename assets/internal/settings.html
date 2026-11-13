@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asetukset — Viima</title>
+    <title data-i18n="set.page_title">Asetukset — Viima</title>
     <link rel="icon" type="image/png" href="viima-logo.png">
     <style>
         :root {
@@ -244,7 +244,7 @@
             font-size: 12px;
             font-weight: 500;
             background: var(--bg-control);
-            color: var(--text-muted);
+            color: var(--text-dim);
         }
 
         .status-pill.is-ok {
@@ -289,9 +289,60 @@
         .update-notes {
             margin-top: 6px;
             font-size: 12.5px;
-            color: var(--text-muted);
+            color: var(--text-dim);
             white-space: pre-line;
             max-width: 520px;
+        }
+
+        .site-list {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .site-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--bg-control);
+            font-size: 13px;
+        }
+
+        .site-row span:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .site-row .count {
+            color: var(--text-dim);
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        .btn-small {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        .private-note {
+            display: none;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: rgba(168, 85, 247, 0.14);
+            color: #c084fc;
+            font-size: 13px;
+        }
+
+        html[data-private] .private-note {
+            display: block;
         }
     </style>
 </head>
@@ -302,8 +353,10 @@
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
-            <h1>Selaimen asetukset</h1>
+            <h1 data-i18n="set.title">Selaimen asetukset</h1>
         </div>
+
+        <div class="private-note" data-i18n="nt.private">Olet yksityisessä ikkunassa. Historia, evästeet ja sivustotiedot poistetaan, kun suljet sen.</div>
 
         <!-- Hakuasetukset -->
         <div class="section">
@@ -312,26 +365,26 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <span>Haku & Osoiterivi</span>
+                <span data-i18n="set.search">Haku & Osoiterivi</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Oletushakukone</span>
-                    <span class="setting-desc">Käytetään osoiterivin ja aloitussivun hakukyselyissä</span>
+                    <span class="setting-label" data-i18n="set.engine">Oletushakukone</span>
+                    <span class="setting-desc" data-i18n="set.engine_desc">Käytetään osoiterivin ja aloitussivun hakukyselyissä</span>
                 </div>
                 <select class="custom-select" id="selectSearchEngine">
-                    <option value="google" selected>Google (Oletus)</option>
-                    <option value="duckduckgo">DuckDuckGo (Yksityinen)</option>
+                    <option value="google" selected>Google</option>
+                    <option value="duckduckgo">DuckDuckGo</option>
                     <option value="bing">Microsoft Bing</option>
-                    <option value="wikipedia">Wikipedia (Suomi)</option>
+                    <option value="wikipedia">Wikipedia</option>
                 </select>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Pikahaut (Bang-komennot)</span>
-                    <span class="setting-desc">Voit hakea suoraan esim: <code>!g rust</code>, <code>!yt video</code>, <code>!w suomi</code>, <code>!gh linux</code></span>
+                    <span class="setting-label" data-i18n="set.bangs">Pikahaut (Bang-komennot)</span>
+                    <span class="setting-desc" data-i18n="set.bangs_desc">Voit hakea suoraan esim: !g rust, !yt video, !w suomi, !gh linux</span>
                 </div>
-                <span class="info-pill">Aina käytössä</span>
+                <span class="info-pill" data-i18n="set.always_on">Aina käytössä</span>
             </div>
         </div>
 
@@ -341,15 +394,35 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
-                <span>Ulkoasu</span>
+                <span data-i18n="set.appearance">Ulkoasu</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Tumma teema</span>
-                    <span class="setting-desc">Vaihda selaimen ja sisäsivujen teema tumman ja vaalean välillä</span>
+                    <span class="setting-label" data-i18n="set.dark">Tumma teema</span>
+                    <span class="setting-desc" data-i18n="set.dark_desc">Vaihda selaimen ja sisäsivujen teema tumman ja vaalean välillä</span>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="toggleTheme" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.language">Kieli / Language</span>
+                    <span class="setting-desc" data-i18n="set.language_desc">Selaimen käyttöliittymän kieli</span>
+                </div>
+                <select class="custom-select" id="selectLanguage">
+                    <option value="fi">Suomi</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.bar">Kirjanmerkkipalkki</span>
+                    <span class="setting-desc" data-i18n="set.bar_desc">Näytä kirjanmerkit osoiterivin alla (Ctrl+Shift+B)</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" data-setting="show_bookmarks_bar">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -361,12 +434,12 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
-                <span>Turvallisuus & Suojaus</span>
+                <span data-i18n="set.security">Turvallisuus & Yksityisyys</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Mainosten ja seurantainjektioiden esto</span>
-                    <span class="setting-desc">Estää tunnetut mainosverkot, analytiikkaseuraimet ja ponnahdusikkunat</span>
+                    <span class="setting-label" data-i18n="set.adblock">Mainosten ja seurannan esto</span>
+                    <span class="setting-desc" data-i18n="set.adblock_desc">Estää tunnetut mainosverkot, analytiikkaseuraimet ja ponnahdusikkunat</span>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="toggleAdblock" checked>
@@ -375,10 +448,96 @@
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Tyhjennä selaushistoria</span>
-                    <span class="setting-desc">Poistaa kaikki paikallisesti tallennetut selaustiedot</span>
+                    <span class="setting-label" data-i18n="set.lists">Suodatinlistat (EasyList, EasyPrivacy, Peter Lowe)</span>
+                    <span class="setting-desc" data-i18n="set.lists_desc">Lataa yhteisön estolistat taustalla kerran viikossa</span>
+                    <span class="setting-desc" id="listsStatus"></span>
                 </div>
-                <button class="btn-action btn-danger" id="btnClearHistory">Tyhjennä historia</button>
+                <div class="update-controls">
+                    <button class="btn-action btn-small" id="btnUpdateLists" data-i18n="set.lists_update">Päivitä nyt</button>
+                    <label class="switch">
+                        <input type="checkbox" data-setting="adblock_lists">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.cookies">Piilota evästeilmoitukset</span>
+                    <span class="setting-desc" data-i18n="set.cookies_desc">Piilottaa suostumusikkunat. Mitään ei hyväksytä puolestasi.</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" data-setting="hide_cookie_banners">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.https">HTTPS-tila</span>
+                    <span class="setting-desc" data-i18n="set.https_desc">Pakottaa salatun yhteyden ja varoittaa ennen salaamattoman sivun avaamista</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" data-setting="https_only">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row" style="flex-wrap: wrap;">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.site_data">Evästeet ja sivustotiedot</span>
+                    <span class="setting-desc" data-i18n="set.site_data_desc">Näe, mitkä sivustot tallentavat evästeitä, ja poista yksittäisen sivuston tiedot kirjautumatta ulos muualta</span>
+                </div>
+                <button class="btn-action" id="btnSiteData" data-i18n="set.site_data_show">Näytä sivustot</button>
+                <div class="site-list" id="siteList" style="width: 100%;" hidden></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.private">Uusi yksityinen ikkuna</span>
+                    <span class="setting-desc" data-i18n="set.private_desc">Selaa tallentamatta historiaa, evästeitä tai sivustotietoja (Ctrl+Shift+N)</span>
+                </div>
+                <button class="btn-action" id="btnPrivate" data-i18n="set.private_btn">Avaa yksityinen ikkuna</button>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.clear_history">Tyhjennä selaushistoria</span>
+                    <span class="setting-desc" data-i18n="set.clear_history_desc">Poistaa kaikki paikallisesti tallennetut selaustiedot</span>
+                </div>
+                <button class="btn-action btn-danger" id="btnClearHistory" data-i18n="set.clear_history_btn">Tyhjennä historia</button>
+            </div>
+        </div>
+
+        <!-- Järjestelmä -->
+        <div class="section">
+            <div class="section-title">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <span data-i18n="set.system">Järjestelmä</span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.default">Oletusselain</span>
+                    <span class="setting-desc" data-i18n="set.default_desc">Avaa muiden sovellusten linkit Viimassa. Avaa Windowsin Oletussovellukset-asetukset.</span>
+                </div>
+                <button class="btn-action btn-primary" id="btnDefault" data-i18n="set.default_btn">Aseta Viima oletusselaimeksi</button>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.sleeping">Lepotilavälilehdet</span>
+                    <span class="setting-desc" data-i18n="set.sleeping_desc">Purkaa yli 30 minuuttia taustalla olleet välilehdet muistista</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" data-setting="sleeping_tabs">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label" data-i18n="set.devtools">Kehittäjätyökalut</span>
+                    <span class="setting-desc" data-i18n="set.devtools_desc">F12, Ctrl+Shift+I ja sivun valikon "Tarkista elementti"</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" data-setting="devtools_enabled">
+                    <span class="slider"></span>
+                </label>
             </div>
         </div>
 
@@ -389,11 +548,11 @@
                     <polyline points="23 4 23 10 17 10"></polyline>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                <span>Päivitykset</span>
+                <span data-i18n="set.updates">Päivitykset</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Sovelluksen päivitystila (v{{VERSION}})</span>
+                    <span class="setting-label" id="updateStatusLabel">Sovelluksen päivitystila (v{{VERSION}})</span>
                     <span class="setting-desc" id="updateStatusDesc">Tarkista saatavilla olevat päivitykset GitHub-julkaisuista.</span>
                     <div class="update-notes" id="updateNotes" hidden></div>
                 </div>
@@ -404,8 +563,8 @@
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Automaattiset päivitykset</span>
-                    <span class="setting-desc">Lataa uudet versiot taustalla käynnistyksen yhteydessä (asennettu versio).</span>
+                    <span class="setting-label" data-i18n="set.auto_update">Automaattiset päivitykset</span>
+                    <span class="setting-desc" data-i18n="set.auto_update_desc">Lataa uudet versiot taustalla käynnistyksen yhteydessä (asennettu versio).</span>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="toggleAutoUpdate" checked>
@@ -414,12 +573,12 @@
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Päivityslähde (HTTPS URL)</span>
-                    <span class="setting-desc">Osoite `latest.json`-tiedostoon tai GitHub Releases API:in</span>
+                    <span class="setting-label" data-i18n="set.update_url">Päivityslähde (HTTPS URL)</span>
+                    <span class="setting-desc" data-i18n="set.update_url_desc">Osoite latest.json-tiedostoon tai GitHub Releases API:in</span>
                 </div>
                 <div class="update-url-group">
                     <input type="url" class="custom-input" id="inputUpdateUrl" placeholder="https://github.com/.../latest.json">
-                    <button class="btn-action" id="btnSaveUpdateUrl">Tallenna</button>
+                    <button class="btn-action" id="btnSaveUpdateUrl" data-i18n="set.save">Tallenna</button>
                 </div>
             </div>
         </div>
@@ -432,29 +591,32 @@
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
-                <span>Tietoja sovelluksesta</span>
+                <span data-i18n="set.about">Tietoja sovelluksesta</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info" style="flex-direction: row; align-items: center; gap: 12px;">
                     <img src="viima-logo.png" alt="Viima" style="width: 36px; height: 36px; border-radius: 9px; object-fit: cover;">
                     <div style="display: flex; flex-direction: column; gap: 2px;">
                         <span class="setting-label">Viima</span>
-                        <span class="setting-desc">Versio {{VERSION}} • IT-Veljekset Group</span>
+                        <span class="setting-desc">v{{VERSION}} • IT-Veljekset Group</span>
                     </div>
                 </div>
                 <span class="info-pill">Rust 2024 + WebView2</span>
             </div>
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Pikanäppäimet</span>
-                    <span class="setting-desc">Ctrl+T: Uusi välilehti • Ctrl+W: Sulje välilehti • Ctrl+R: Päivitä • Ctrl+L: Osoiterivi</span>
+                    <span class="setting-label" data-i18n="set.shortcuts">Pikanäppäimet</span>
+                    <span class="setting-desc" data-i18n="set.shortcuts_desc">Ctrl+T uusi välilehti • Ctrl+W sulje • Ctrl+Shift+T palauta • Ctrl+F etsi • Ctrl +/-/0 zoomaus • Ctrl+P tulosta • Ctrl+J lataukset • Ctrl+Shift+N yksityinen ikkuna • Ctrl+Shift+B kirjanmerkkipalkki • F12 kehittäjätyökalut</span>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="i18n.js"></script>
     <script>
+        const VERSION = '{{VERSION}}';
         const selectSearchEngine = document.getElementById('selectSearchEngine');
+        const selectLanguage = document.getElementById('selectLanguage');
         const toggleAdblock = document.getElementById('toggleAdblock');
         const toggleTheme = document.getElementById('toggleTheme');
         const btnClearHistory = document.getElementById('btnClearHistory');
@@ -465,10 +627,16 @@
         const updateStatusPill = document.getElementById('updateStatusPill');
         const updateStatusDesc = document.getElementById('updateStatusDesc');
         const updateNotesEl = document.getElementById('updateNotes');
+        const listsStatusEl = document.getElementById('listsStatus');
+        const btnUpdateLists = document.getElementById('btnUpdateLists');
+        const siteListEl = document.getElementById('siteList');
+        const settingToggles = document.querySelectorAll('input[data-setting]');
+
+        document.getElementById('updateStatusLabel').textContent = t('set.update_status', 'Sovelluksen päivitystila (v{v})', { v: VERSION });
 
         let latestUpdateState = 'idle';
+        let siteDataRequested = false;
 
-        // Post message to top frame if available
         function notifyParent(action, payload = {}) {
             if (window.ipc && window.ipc.postMessage) {
                 window.ipc.postMessage(JSON.stringify({ action, ...payload }));
@@ -484,107 +652,153 @@
             updateNotesEl.hidden = true;
             updateNotesEl.textContent = '';
 
-            const verLabel = upd.latest_version ? `v${upd.latest_version}` : '';
+            const v = upd.latest_version ? `v${upd.latest_version}` : '';
+            const showNotes = () => {
+                if (upd.release_notes) {
+                    updateNotesEl.textContent = upd.release_notes;
+                    updateNotesEl.hidden = false;
+                }
+            };
             if (latestUpdateState === 'checking') {
-                updateStatusPill.textContent = 'Tarkistetaan...';
-                updateStatusDesc.textContent = 'Otetaan yhteyttä päivityspalvelimeen...';
-                btnUpdateAction.textContent = 'Tarkistetaan...';
+                updateStatusPill.textContent = t('set.upd_checking', 'Tarkistetaan...');
+                updateStatusDesc.textContent = t('set.upd_checking_desc', 'Otetaan yhteyttä päivityspalvelimeen...');
+                btnUpdateAction.textContent = t('set.upd_checking', 'Tarkistetaan...');
                 btnUpdateAction.disabled = true;
             } else if (latestUpdateState === 'up_to_date') {
-                updateStatusPill.textContent = 'Ajan tasalla';
+                updateStatusPill.textContent = t('set.upd_ok', 'Ajan tasalla');
                 updateStatusPill.classList.add('is-ok');
-                updateStatusDesc.textContent = `Viima v${upd.current_version} on uusin julkaistu versio.`;
-                btnUpdateAction.textContent = 'Tarkista uudelleen';
+                updateStatusDesc.textContent = t('set.upd_ok_desc', 'Viima v{v} on uusin julkaistu versio.', { v: upd.current_version });
+                btnUpdateAction.textContent = t('set.upd_again', 'Tarkista uudelleen');
             } else if (latestUpdateState === 'available') {
-                updateStatusPill.textContent = `Saatavilla ${verLabel}`;
+                updateStatusPill.textContent = t('set.upd_available', 'Saatavilla {v}', { v });
                 updateStatusPill.classList.add('is-available');
                 updateStatusDesc.textContent = upd.can_self_update
-                    ? `Uusi versio ${verLabel} on saatavilla.`
-                    : `Uusi versio ${verLabel} saatavilla (itse-päivitys vaatii asennetun version).`;
-                btnUpdateAction.textContent = 'Lataa päivitys';
+                    ? t('set.upd_available_desc', 'Uusi versio {v} on saatavilla.', { v })
+                    : t('set.upd_available_dev', 'Uusi versio {v} saatavilla (itse-päivitys vaatii asennetun version).', { v });
+                btnUpdateAction.textContent = t('set.upd_download', 'Lataa päivitys');
                 btnUpdateAction.disabled = !upd.can_self_update;
-                if (upd.release_notes) {
-                    updateNotesEl.textContent = upd.release_notes;
-                    updateNotesEl.hidden = false;
-                }
+                showNotes();
             } else if (latestUpdateState === 'downloading') {
-                updateStatusPill.textContent = 'Ladataan...';
+                updateStatusPill.textContent = t('set.upd_downloading', 'Ladataan...');
                 updateStatusPill.classList.add('is-available');
-                updateStatusDesc.textContent = `Ladataan ja varmistetaan versiota ${verLabel}...`;
-                btnUpdateAction.textContent = 'Ladataan...';
+                updateStatusDesc.textContent = t('set.upd_downloading_desc', 'Ladataan ja varmistetaan versiota {v}...', { v });
+                btnUpdateAction.textContent = t('set.upd_downloading', 'Ladataan...');
                 btnUpdateAction.disabled = true;
             } else if (latestUpdateState === 'ready') {
-                updateStatusPill.textContent = `Valmis ${verLabel}`;
+                updateStatusPill.textContent = t('set.upd_ready', 'Valmis {v}', { v });
                 updateStatusPill.classList.add('is-ok');
-                updateStatusDesc.textContent = `Versio ${verLabel} on ladattu ja vahvistettu. Käynnistä uudelleen asentaaksesi.`;
-                btnUpdateAction.textContent = 'Käynnistä uudelleen ja päivitä';
-                if (upd.release_notes) {
-                    updateNotesEl.textContent = upd.release_notes;
-                    updateNotesEl.hidden = false;
-                }
+                updateStatusDesc.textContent = t('set.upd_ready_desc', 'Versio {v} on ladattu ja vahvistettu. Käynnistä uudelleen asentaaksesi.', { v });
+                btnUpdateAction.textContent = t('set.upd_restart', 'Käynnistä uudelleen ja päivitä');
+                showNotes();
             } else if (latestUpdateState === 'error') {
-                updateStatusPill.textContent = 'Virhe';
+                updateStatusPill.textContent = t('set.upd_error', 'Virhe');
                 updateStatusPill.classList.add('is-error');
-                updateStatusDesc.textContent = upd.error || 'Päivityksen tarkistus epäonnistui.';
-                btnUpdateAction.textContent = 'Yritä uudelleen';
+                updateStatusDesc.textContent = upd.error || t('set.upd_error_desc', 'Päivityksen tarkistus epäonnistui.');
+                btnUpdateAction.textContent = t('set.upd_retry', 'Yritä uudelleen');
             } else {
-                updateStatusPill.textContent = upd.can_self_update ? 'Valmis' : 'Kehitystila';
+                updateStatusPill.textContent = upd.can_self_update ? t('set.upd_idle', 'Valmis') : t('set.upd_dev', 'Kehitystila');
                 updateStatusDesc.textContent = upd.can_self_update
-                    ? 'Tarkista saatavilla olevat päivitykset.'
-                    : 'Tarkistus toimii; automaattinen korvaus aktivoituu asennetussa versiossa.';
-                btnUpdateAction.textContent = 'Tarkista päivitykset';
+                    ? t('set.upd_idle_desc', 'Tarkista saatavilla olevat päivitykset.')
+                    : t('set.upd_dev_desc', 'Tarkistus toimii; automaattinen korvaus aktivoituu asennetussa versiossa.');
+                btnUpdateAction.textContent = t('set.upd_check', 'Tarkista päivitykset');
+            }
+        }
+
+        function renderLists(settings, status) {
+            if (status && status.updating) {
+                listsStatusEl.textContent = t('set.lists_updating', 'Päivitetään...');
+                btnUpdateLists.disabled = true;
+                return;
+            }
+            btnUpdateLists.disabled = !settings.adblock_lists;
+            if (status && status.error) {
+                listsStatusEl.textContent = status.error;
+            } else if (settings.adblock_lists_updated) {
+                const d = new Date(settings.adblock_lists_updated * 1000).toLocaleDateString(window.viimaLang === 'en' ? 'en-GB' : 'fi-FI');
+                listsStatusEl.textContent = t('set.lists_status', '{n} sääntöä · päivitetty {d}', { n: settings.adblock_rule_count.toLocaleString(), d });
+            } else {
+                listsStatusEl.textContent = t('set.lists_never', 'Ei vielä ladattu');
+            }
+        }
+
+        function renderSiteData(list) {
+            siteListEl.replaceChildren();
+            siteListEl.hidden = false;
+            if (!list.length) {
+                const e = document.createElement('div');
+                e.className = 'setting-desc';
+                e.textContent = t('set.site_data_empty', 'Ei tallennettuja evästeitä.');
+                siteListEl.appendChild(e);
+                return;
+            }
+            for (const [site, count] of list) {
+                const row = document.createElement('div');
+                row.className = 'site-row';
+                const name = document.createElement('span');
+                name.textContent = site;
+                const c = document.createElement('span');
+                c.className = 'count';
+                c.textContent = t('set.site_data_count', '{n} evästettä', { n: count });
+                const del = document.createElement('button');
+                del.className = 'btn-action btn-danger btn-small';
+                del.textContent = t('set.delete', 'Poista');
+                del.addEventListener('click', () => {
+                    del.disabled = true;
+                    notifyParent('clear_site_data', { site });
+                });
+                row.append(name, c, del);
+                siteListEl.appendChild(row);
             }
         }
 
         window.onBrowserStateUpdate = state => {
             if (state.settings) {
-                document.documentElement.dataset.theme = state.settings.dark_mode ? 'dark' : 'light';
-                selectSearchEngine.value = state.settings.search_engine || 'google';
-                toggleAdblock.checked = Boolean(state.settings.adblock_enabled);
-                toggleTheme.checked = Boolean(state.settings.dark_mode);
-                toggleAutoUpdate.checked = Boolean(state.settings.auto_update_enabled);
-                if (document.activeElement !== inputUpdateUrl && typeof state.settings.update_url === 'string') {
-                    inputUpdateUrl.value = state.settings.update_url;
+                const s = state.settings;
+                document.documentElement.dataset.theme = s.dark_mode ? 'dark' : 'light';
+                selectSearchEngine.value = s.search_engine || 'google';
+                selectLanguage.value = s.language || 'fi';
+                toggleAdblock.checked = Boolean(s.adblock_enabled);
+                toggleTheme.checked = Boolean(s.dark_mode);
+                toggleAutoUpdate.checked = Boolean(s.auto_update_enabled);
+                settingToggles.forEach(el => { el.checked = Boolean(s[el.dataset.setting]); });
+                if (document.activeElement !== inputUpdateUrl && typeof s.update_url === 'string') {
+                    inputUpdateUrl.value = s.update_url;
                 }
+                renderLists(s, state.filter_lists);
             }
-            if (state.update) {
-                renderUpdateState(state.update);
-            }
+            if (state.update) renderUpdateState(state.update);
+            if (state.site_data && siteDataRequested) renderSiteData(state.site_data);
         };
 
+        settingToggles.forEach(el => el.addEventListener('change', () => {
+            notifyParent('set_setting', { key: el.dataset.setting, value: el.checked });
+        }));
+        selectLanguage.addEventListener('change', () => notifyParent('set_setting', { key: 'language', value: selectLanguage.value }));
         toggleTheme.addEventListener('change', () => notifyParent('toggle_theme'));
-
-        selectSearchEngine.addEventListener('change', () => {
-            notifyParent('set_search_engine', { engine: selectSearchEngine.value });
+        selectSearchEngine.addEventListener('change', () => notifyParent('set_search_engine', { engine: selectSearchEngine.value }));
+        toggleAdblock.addEventListener('change', () => notifyParent('toggle_adblock'));
+        toggleAutoUpdate.addEventListener('change', () => notifyParent('toggle_auto_update'));
+        btnUpdateLists.addEventListener('click', () => notifyParent('update_filter_lists'));
+        document.getElementById('btnSiteData').addEventListener('click', () => {
+            siteDataRequested = true;
+            notifyParent('list_site_data');
         });
-
-        toggleAdblock.addEventListener('change', () => {
-            notifyParent('toggle_adblock');
-        });
-
-        toggleAutoUpdate.addEventListener('change', () => {
-            notifyParent('toggle_auto_update');
-        });
+        document.getElementById('btnPrivate').addEventListener('click', () => notifyParent('private_window'));
+        document.getElementById('btnDefault').addEventListener('click', () => notifyParent('set_default_browser'));
 
         btnSaveUpdateUrl.addEventListener('click', () => {
             const url = inputUpdateUrl.value.trim();
-            if (url) {
-                notifyParent('set_update_url', { url });
-            }
+            if (url) notifyParent('set_update_url', { url });
         });
 
         btnUpdateAction.addEventListener('click', () => {
-            if (latestUpdateState === 'ready') {
-                notifyParent('install_update');
-            } else if (latestUpdateState === 'available') {
-                notifyParent('download_update');
-            } else {
-                notifyParent('check_updates');
-            }
+            if (latestUpdateState === 'ready') notifyParent('install_update');
+            else if (latestUpdateState === 'available') notifyParent('download_update');
+            else notifyParent('check_updates');
         });
 
         btnClearHistory.addEventListener('click', () => {
-            if (confirm("Haluatko varmasti tyhjentää koko selaushistorian?")) {
+            if (confirm(t('set.confirm_history', 'Haluatko varmasti tyhjentää koko selaushistorian?'))) {
                 notifyParent('clear_history');
             }
         });

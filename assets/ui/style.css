@@ -79,7 +79,7 @@ body {
     font-size: 13px;
     line-height: 1.4;
     overflow: hidden;
-    height: 84px;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     border-bottom: 1px solid var(--border-subtle);
@@ -663,4 +663,200 @@ html[data-theme="light"] .icon-sun {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== PRIVATE WINDOW ==================== */
+.private-badge {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    margin-bottom: 2px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #e9d5ff;
+    background: rgba(168, 85, 247, 0.25);
+    pointer-events: none;
+}
+
+html[data-private] .private-badge {
+    display: inline-flex;
+}
+
+html[data-private] .tab-strip-container {
+    background: linear-gradient(90deg, #2e1065, #3b0764 60%, #1e1b4b);
+}
+
+html[data-private] .tab.active {
+    border-top-color: #c084fc;
+}
+
+/* ==================== TAB STATES ==================== */
+.tab.pinned {
+    flex: 0 0 40px;
+    min-width: 40px;
+    max-width: 40px;
+    justify-content: center;
+    padding: 0;
+    gap: 2px;
+}
+
+.tab.pinned .tab-title,
+.tab.pinned .tab-close {
+    display: none;
+}
+
+.tab.pinned:not(.has-audio) .tab-audio {
+    display: none;
+}
+
+.tab.sleeping .tab-icon,
+.tab.sleeping .tab-title {
+    opacity: 0.55;
+}
+
+.tab-audio {
+    display: none;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.tab.has-audio .tab-audio {
+    display: flex;
+}
+
+.tab-audio:hover {
+    background-color: var(--hover-overlay);
+    color: var(--text-primary);
+}
+
+.tab.dragging {
+    opacity: 0.45;
+}
+
+.tab.drop-before {
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.tab.drop-after {
+    box-shadow: inset -2px 0 0 var(--accent);
+}
+
+/* ==================== OMNIBOX EXTRAS ==================== */
+.zoom-badge {
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-tab);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.zoom-badge:hover {
+    color: var(--text-primary);
+    border-color: var(--border-active);
+}
+
+/* ==================== DOWNLOADS BUTTON ==================== */
+#btnDownloads {
+    position: relative;
+    overflow: hidden;
+}
+
+#btnDownloads.dl-active {
+    color: var(--accent);
+}
+
+.dl-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    transition: width 0.25s ease;
+}
+
+/* ==================== BOOKMARKS BAR ==================== */
+.bookmarks-bar {
+    height: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 10px 2px;
+    background-color: var(--bg-chrome);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.bookmarks-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.bm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    max-width: 180px;
+    padding: 0 8px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: 500 12px/1 inherit;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.bm-chip:hover {
+    background-color: var(--bg-tab-hover);
+    color: var(--text-primary);
+}
+
+.bm-chip span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bm-chip img,
+.bm-letter {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    border-radius: 3px;
+}
+
+.bm-letter {
+    display: inline-grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+}
+
+.bm-folder svg {
+    color: var(--star-gold);
+    flex-shrink: 0;
+}
+
+.bm-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding-left: 4px;
 }

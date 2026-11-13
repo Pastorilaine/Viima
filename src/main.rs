@@ -2,12 +2,18 @@
 
 mod adblock;
 mod app;
+mod history_db;
+mod i18n;
 mod storage;
 mod tab;
 mod updater;
 mod url_resolver;
 #[cfg(windows)]
+mod webview_hooks;
+#[cfg(windows)]
 mod win_platform;
+#[cfg(windows)]
+mod win_shell;
 
 use app::{AppEvent, BrowserApp};
 use tao::{
@@ -18,8 +24,48 @@ use tao::{
     window::WindowBuilder,
 };
 
+/// Command line: `viima.exe [--private] [url | file path ...]`. Internal flags are skipped.
+fn parse_cli(args: &[String]) -> (bool, Vec<String>) {
+    let mut private = false;
+    let mut urls = Vec::new();
+    let mut skip_next = false;
+    for arg in args {
+        if skip_next {
+            skip_next = false;
+        } else if arg == "--private" || arg == "--incognito" {
+            private = true;
+        } else if arg == "--cleanup-update" {
+            skip_next = true;
+        } else if !arg.starts_with("--") && !arg.trim().is_empty() {
+            urls.push(cli_target(arg));
+        }
+    }
+    (private, urls)
+}
+
+/// A local file (e.g. a double-clicked .html or .pdf) becomes a file:// URL; anything else
+/// goes through the omnibox resolver later (URL or search).
+fn cli_target(arg: &str) -> String {
+    let path = std::path::Path::new(arg);
+    if path.is_file()
+        && let Ok(abs) = path.canonicalize()
+        && let Ok(url) = url::Url::from_file_path(abs.to_string_lossy().trim_start_matches(r"\\?\"))
+    {
+        return url.to_string();
+    }
+    arg.to_string()
+}
+
 fn main() {
     if updater::handle_cli_args() {
+        return;
+    }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let (private, urls) = parse_cli(&args);
+
+    // A second normal launch (e.g. a link clicked in another app) goes to the open window.
+    #[cfg(windows)]
+    if !private && win_shell::forward_to_running_instance(&urls.join("\n")) {
         return;
     }
 
@@ -34,8 +80,13 @@ fn main() {
     .ok();
 
     let window = WindowBuilder::new()
-        .with_title("Viima")
+        .with_title(if private { "Viima (yksityinen)" } else { "Viima" })
         .with_window_icon(window_icon)
+        .with_window_classname(if private {
+            "ViimaPrivateWindow"
+        } else {
+            win_shell::MAIN_WINDOW_CLASS
+        })
         .with_inner_size(LogicalSize::new(1280.0, 820.0))
         .with_min_inner_size(LogicalSize::new(640.0, 480.0))
         .with_decorations(false)
@@ -60,137 +111,37 @@ fn main() {
         SetForegroundWindow(hwnd_ptr);
     }
 
+    #[cfg(windows)]
+    if !private {
+        let forward = proxy.clone();
+        win_shell::install_copydata_hook(
+            window.hwnd(),
+            Box::new(move |payload| {
+                let urls = payload
+                    .lines()
+                    .filter(|l| !l.trim().is_empty())
+                    .map(str::to_string)
+                    .collect();
+                let _ = forward.send_event(AppEvent::OpenUrls(urls));
+            }),
+        );
+    }
+
     let window = std::rc::Rc::new(window);
-    let win = window.clone();
-    let mut browser = BrowserApp::new(window.clone(), proxy);
+    let mut browser = BrowserApp::new(window, proxy, private, urls);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
-
         match event {
-            Event::UserEvent(app_event) => match app_event {
-                AppEvent::IpcNewTab(url) => {
-                    browser.new_tab(url);
-                }
-                AppEvent::IpcCloseTab(id) => {
-                    browser.close_tab(id);
-                }
-                AppEvent::IpcSwitchTab(id) => {
-                    browser.switch_tab(id);
-                }
-                AppEvent::IpcNavigate(url) => {
-                    browser.navigate_active(&url);
-                }
-                AppEvent::IpcBack => {
-                    browser.go_back();
-                }
-                AppEvent::IpcForward => {
-                    browser.go_forward();
-                }
-                AppEvent::IpcReload => {
-                    browser.reload();
-                }
-                AppEvent::IpcToggleBookmark => {
-                    browser.toggle_bookmark();
-                }
-                AppEvent::IpcRemoveBookmark(url) => {
-                    browser.remove_bookmark(&url);
-                }
-                AppEvent::IpcClearHistory => {
-                    browser.clear_history();
-                }
-                AppEvent::IpcDeleteHistoryItem(url) => {
-                    browser.delete_history_item(&url);
-                }
-                AppEvent::IpcSetSearchEngine(engine) => {
-                    browser.set_search_engine(&engine);
-                }
-                AppEvent::IpcToggleAdblock => {
-                    browser.toggle_adblock();
-                }
-                AppEvent::IpcToggleTheme => {
-                    browser.toggle_theme();
-                }
-                AppEvent::IpcCheckUpdates => {
-                    browser.check_for_updates(true);
-                }
-                AppEvent::IpcDownloadUpdate => {
-                    browser.download_update();
-                }
-                AppEvent::IpcInstallUpdate => {
-                    if browser.install_staged_update() {
-                        browser.flush();
-                        *control_flow = ControlFlow::Exit;
-                    }
-                }
-                AppEvent::IpcToggleAutoUpdate => {
-                    browser.toggle_auto_update();
-                }
-                AppEvent::IpcSetUpdateUrl(url) => {
-                    browser.set_update_url(&url);
-                }
-                AppEvent::IpcRequestInitialState => {
-                    browser.update_data();
-                }
-                AppEvent::IpcCloseActiveTab => {
-                    browser.close_active_tab();
-                }
-                AppEvent::IpcReopenTab => {
-                    browser.reopen_closed_tab();
-                }
-                AppEvent::IpcCycleTab(forward) => {
-                    browser.cycle_tab(forward);
-                }
-                AppEvent::IpcSelectTab(index) => {
-                    browser.select_tab_index(index);
-                }
-                AppEvent::IpcAutocomplete(typed) => {
-                    browser.autocomplete(&typed);
-                }
-                AppEvent::TabFavicon(id, url) => {
-                    browser.on_favicon(id, url);
-                }
-                AppEvent::IpcFocusOmnibox => {
-                    browser.focus_omnibox();
-                }
-                AppEvent::IpcMinimize => {
-                    win.set_minimized(true);
-                }
-                AppEvent::IpcMaximize => {
-                    let is_max = win.is_maximized();
-                    win.set_maximized(!is_max);
-                }
-                AppEvent::IpcClose => {
-                    browser.flush();
+            Event::UserEvent(app_event) => {
+                if browser.handle_event(app_event) {
                     *control_flow = ControlFlow::Exit;
                 }
-                AppEvent::IpcDragWindow => {
-                    let _ = win.drag_window();
-                }
-                AppEvent::TabTitleChanged(id, title) => {
-                    browser.on_title_changed(id, title);
-                }
-                AppEvent::TabPageLoadStarted(id, url) => {
-                    browser.on_page_started(id, url);
-                }
-                AppEvent::TabPageLoadFinished(id, url) => {
-                    browser.on_page_finished(id, url);
-                }
-                AppEvent::UpdateCheckFinished { manual, result } => {
-                    browser.on_update_check_finished(manual, result);
-                }
-                AppEvent::UpdateDownloadFinished(result) => {
-                    browser.on_update_download_finished(result);
-                }
-            },
-
+            }
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),
                 ..
-            } => {
-                browser.on_resize(size);
-            }
-
+            } => browser.on_resize(size),
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
@@ -198,8 +149,27 @@ fn main() {
                 browser.flush();
                 *control_flow = ControlFlow::Exit;
             }
-
             _ => {}
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_cli() {
+        let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            parse_cli(&args(&["https://yle.fi", "--private"])),
+            (true, vec!["https://yle.fi".to_string()])
+        );
+        assert_eq!(
+            parse_cli(&args(&["--cleanup-update", r"C:\x\Viima-staged.exe"])),
+            (false, vec![])
+        );
+        let (_, urls) = parse_cli(&args(&["Cargo.toml"]));
+        assert!(urls[0].starts_with("file:///"), "{urls:?}");
+    }
 }

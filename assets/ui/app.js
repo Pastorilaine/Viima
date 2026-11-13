@@ -6,8 +6,13 @@ let currentState = {
     settings: {
         search_engine: 'google',
         adblock_enabled: true
-    }
+    },
+    downloads: { active: 0, percent: -1, total: 0 },
+    private: false
 };
+
+// i18n.js defines window.t; keep working if it failed to load.
+const tr = window.t || ((key, fi) => fi);
 
 // SVG Icon Definitions (High-res, modern, geometric)
 const ICONS = {
@@ -18,12 +23,18 @@ const ICONS = {
     warning: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
     search: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
     starOutline: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
-    starFilled: `<svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
+    starFilled: `<svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
+    speaker: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M19 5a10 10 0 0 1 0 14"></path></svg>`,
+    muted: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="22" y1="9" x2="16" y2="15"></line><line x1="16" y1="9" x2="22" y2="15"></line></svg>`,
+    folder: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`
 };
 
-// Name of the internal page for browser://x or http://browser.x (x = one of the four), else null.
+const INTERNAL_PAGES = 'newtab|history|bookmarks|settings|downloads|insecure';
+const INTERNAL_RE = new RegExp(`^(?:browser:\\/\\/|http:\\/\\/browser\\.)(${INTERNAL_PAGES})(?:[\\/?#].*)?$`);
+
+// Name of the internal page for browser://x or http://browser.x, else null.
 function internalPage(url) {
-    const m = /^(?:browser:\/\/|http:\/\/browser\.)(newtab|history|bookmarks|settings)(?:[\/?#].*)?$/.exec(url);
+    const m = INTERNAL_RE.exec(url);
     return m ? m[1] : null;
 }
 
@@ -55,14 +66,19 @@ const btnReloadEl = document.getElementById('btnReload');
 const btnHomeEl = document.getElementById('btnHome');
 const omniboxInputEl = document.getElementById('omniboxInput');
 const omniboxIconEl = document.getElementById('omniboxIcon');
+const zoomBadgeEl = document.getElementById('zoomBadge');
 const btnStarBookmarkEl = document.getElementById('btnStarBookmark');
 const btnUpdateAppEl = document.getElementById('btnUpdateApp');
 const updateAppTextEl = document.getElementById('updateAppText');
+const btnDownloadsEl = document.getElementById('btnDownloads');
+const downloadsTextEl = document.getElementById('downloadsText');
+const downloadsProgressEl = document.getElementById('downloadsProgress');
 const btnAdblockEl = document.getElementById('btnAdblock');
 const adblockTextEl = document.getElementById('adblockText');
 const btnBookmarksMenuEl = document.getElementById('btnBookmarksMenu');
 const btnHistoryMenuEl = document.getElementById('btnHistoryMenu');
 const btnSettingsMenuEl = document.getElementById('btnSettingsMenu');
+const bookmarksBarEl = document.getElementById('bookmarksBar');
 const storageErrorEl = document.getElementById('storageError');
 
 // Window Controls
@@ -75,6 +91,11 @@ let lastActiveTabId = 0;
 let lastIconKind = '';
 let lastBookmarked = null;
 let lastDismissedError = '';
+let lastBarKey = '';
+
+function newTabTitle() {
+    return tr('ui.new_tab', 'Uusi välilehti');
+}
 
 // Keyed DOM reconciliation for Tabs (avoids wiping DOM & restarting spinners on every update)
 function renderTabs() {
@@ -86,17 +107,22 @@ function renderTabs() {
         if (!entry) {
             const tabEl = document.createElement('div');
             tabEl.dataset.tabId = String(tab.id);
+            tabEl.draggable = true;
             tabEl.innerHTML = `
                 <span class="tab-icon">${ICONS.globe}</span>
                 <span class="tab-spinner"></span>
                 <span class="tab-title"></span>
-                <span class="tab-close" title="Sulje välilehti (Ctrl+W)">${ICONS.close}</span>
+                <span class="tab-audio"></span>
+                <span class="tab-close">${ICONS.close}</span>
             `;
+            tabEl.querySelector('.tab-close').title = tr('ui.close_tab', 'Sulje välilehti (Ctrl+W)');
             entry = {
                 el: tabEl,
                 titleEl: tabEl.querySelector('.tab-title'),
                 iconEl: tabEl.querySelector('.tab-icon'),
+                audioEl: tabEl.querySelector('.tab-audio'),
                 favicon: null,
+                audio: '',
             };
             tabElements.set(tab.id, entry);
         }
@@ -117,22 +143,35 @@ function renderTabs() {
             }
         }
 
+        // Audio indicator: click mutes / unmutes without switching tabs.
+        const audio = tab.muted ? 'muted' : (tab.audible ? 'playing' : '');
+        if (entry.audio !== audio) {
+            entry.audio = audio;
+            entry.audioEl.innerHTML = audio === 'muted' ? ICONS.muted : (audio ? ICONS.speaker : '');
+            entry.audioEl.title = audio === 'muted'
+                ? tr('ui.unmute', 'Poista mykistys')
+                : tr('ui.mute', 'Mykistä välilehti');
+        }
+
         const nextClass =
             'tab' +
             (tab.id === currentState.active_tab_id ? ' active' : '') +
-            (tab.is_loading ? ' loading' : '');
-        if (entry.el.className !== nextClass) {
+            (tab.is_loading ? ' loading' : '') +
+            (tab.pinned ? ' pinned' : '') +
+            (tab.sleeping ? ' sleeping' : '') +
+            (audio ? ' has-audio' : '');
+        if (entry.el.className.replace(/ ?(drop-before|drop-after|dragging)/g, '') !== nextClass) {
             entry.el.className = nextClass;
-        }
-
-        const nextTooltip = tab.title || tab.url || '';
-        if (entry.el.title !== nextTooltip) {
-            entry.el.title = nextTooltip;
         }
 
         let titleText = tab.title || '';
         if (!titleText || internalPage(titleText) === 'newtab') {
-            titleText = 'Uusi välilehti';
+            titleText = newTabTitle();
+        }
+        const nextTooltip = (tab.title || tab.url || '') +
+            (tab.sleeping ? ` — ${tr('ui.sleeping', 'lepotilassa')}` : '');
+        if (entry.el.title !== nextTooltip) {
+            entry.el.title = nextTooltip;
         }
         if (entry.titleEl.textContent !== titleText) {
             entry.titleEl.textContent = titleText;
@@ -160,29 +199,47 @@ function renderTabs() {
     }
 }
 
+function tabIdFromEvent(e) {
+    const tabEl = e.target.closest('.tab');
+    return tabEl ? Number(tabEl.dataset.tabId) : 0;
+}
+
+function tabById(id) {
+    return currentState.tabs.find(t => t.id === id);
+}
+
 // Delegated tab strip interactions
 tabsListEl.addEventListener('click', (e) => {
-    const tabEl = e.target.closest('.tab');
-    if (!tabEl) return;
-    const id = Number(tabEl.dataset.tabId);
+    const id = tabIdFromEvent(e);
     if (!id) return;
     if (e.target.closest('.tab-close')) {
         sendIpc('close_tab', { id });
+    } else if (e.target.closest('.tab-audio') && e.target.closest('.tab-audio').innerHTML) {
+        sendIpc('toggle_mute', { id });
     } else {
         omniboxInputEl.blur();
         sendIpc('switch_tab', { id });
     }
 });
 
+// Right click: native tab menu (reload, duplicate, pin, mute, close others...).
+tabsListEl.addEventListener('contextmenu', (e) => {
+    const id = tabIdFromEvent(e);
+    if (!id) return;
+    e.preventDefault();
+    sendIpc('tab_menu', { id });
+});
+
 // Middle click closes a tab (mousedown preventDefault stops the autoscroll cursor).
+// Pinned tabs are protected from accidental closing.
 tabsListEl.addEventListener('mousedown', (e) => {
     if (e.button === 1) e.preventDefault();
 });
 tabsListEl.addEventListener('auxclick', (e) => {
     if (e.button !== 1) return;
-    const tabEl = e.target.closest('.tab');
-    const id = tabEl && Number(tabEl.dataset.tabId);
-    if (id) {
+    const id = tabIdFromEvent(e);
+    const tab = tabById(id);
+    if (tab && !tab.pinned) {
         e.preventDefault();
         sendIpc('close_tab', { id });
     }
@@ -195,13 +252,55 @@ tabsListEl.addEventListener('wheel', (e) => {
     }
 }, { passive: false });
 
+// Drag & drop reordering
+let dragId = 0;
+function clearDropMarks() {
+    tabsListEl.querySelectorAll('.drop-before, .drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+}
+tabsListEl.addEventListener('dragstart', (e) => {
+    dragId = tabIdFromEvent(e);
+    if (!dragId) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(dragId));
+    e.target.closest('.tab').classList.add('dragging');
+});
+tabsListEl.addEventListener('dragover', (e) => {
+    if (!dragId) return;
+    e.preventDefault();
+    clearDropMarks();
+    const target = e.target.closest('.tab');
+    if (!target || Number(target.dataset.tabId) === dragId) return;
+    const r = target.getBoundingClientRect();
+    target.classList.add(e.clientX > r.left + r.width / 2 ? 'drop-after' : 'drop-before');
+});
+tabsListEl.addEventListener('drop', (e) => {
+    if (!dragId) return;
+    e.preventDefault();
+    const target = e.target.closest('.tab');
+    const ids = currentState.tabs.map(t => t.id);
+    const from = ids.indexOf(dragId);
+    let to = ids.length - 1;
+    if (target) {
+        const targetIndex = ids.indexOf(Number(target.dataset.tabId));
+        const r = target.getBoundingClientRect();
+        to = e.clientX > r.left + r.width / 2 ? targetIndex + 1 : targetIndex;
+        if (from < to) to -= 1;
+    }
+    if (from !== -1 && to !== from) sendIpc('reorder_tab', { id: dragId, index: Math.max(0, to) });
+    clearDropMarks();
+});
+tabsListEl.addEventListener('dragend', () => {
+    dragId = 0;
+    clearDropMarks();
+    tabsListEl.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+});
+
 // Render Active Tab Details (Omnibox, Star, Nav buttons)
 function renderActiveTab() {
     const activeTab = currentState.tabs.find(t => t.id === currentState.active_tab_id);
     if (!activeTab) return;
 
-    // Omnibox URL Formatting
-    // Only the four exact internal pages get a browser:// display name. Everything else shows its
+    // Only the exact internal pages get a browser:// display name. Everything else shows its
     // real URL, so a web page can never pass itself off as an internal page.
     const rawUrl = activeTab.url || '';
     const internal = internalPage(rawUrl);
@@ -242,13 +341,18 @@ function renderActiveTab() {
         } else if (iconKind === 'insecure') {
             omniboxIconEl.innerHTML = ICONS.warning;
             omniboxIconEl.className = 'omnibox-icon insecure';
-            omniboxIconEl.title = 'Yhteys ei ole salattu (http). Älä syötä salasanoja.';
+            omniboxIconEl.title = tr('ui.insecure', 'Yhteys ei ole salattu (http). Älä syötä salasanoja.');
         } else {
             omniboxIconEl.innerHTML = ICONS.search;
             omniboxIconEl.className = 'omnibox-icon';
             omniboxIconEl.removeAttribute('title');
         }
     }
+
+    // Zoom indicator (only when not 100 %)
+    const zoom = Math.round((activeTab.zoom || 1) * 100);
+    zoomBadgeEl.classList.toggle('hidden', zoom === 100);
+    zoomBadgeEl.textContent = `${zoom}%`;
 
     // Bookmark star status SVG
     const normalizedActive = normalizeUrl(rawUrl);
@@ -262,11 +366,11 @@ function renderActiveTab() {
         if (isBookmarked) {
             btnStarBookmarkEl.innerHTML = ICONS.starFilled;
             btnStarBookmarkEl.classList.add('bookmarked');
-            btnStarBookmarkEl.title = 'Poista kirjanmerkeistä';
+            btnStarBookmarkEl.title = tr('ui.bookmark_remove', 'Poista kirjanmerkeistä');
         } else {
             btnStarBookmarkEl.innerHTML = ICONS.starOutline;
             btnStarBookmarkEl.classList.remove('bookmarked');
-            btnStarBookmarkEl.title = 'Lisää kirjanmerkkeihin';
+            btnStarBookmarkEl.title = tr('ui.bookmark_add', 'Lisää kirjanmerkkeihin (Ctrl+D)');
         }
     }
 
@@ -276,10 +380,87 @@ function renderActiveTab() {
     btnForwardEl.classList.toggle('dim', !activeTab.can_go_forward);
 
     // Reload icon indicator
-    const reloadTitle = activeTab.is_loading ? 'Ladataan... (Napsauta päivittääksesi)' : 'Päivitä sivu (Ctrl+R)';
+    const reloadTitle = activeTab.is_loading
+        ? tr('ui.loading', 'Ladataan... (Napsauta päivittääksesi)')
+        : tr('ui.reload', 'Päivitä sivu (Ctrl+R / F5)');
     if (btnReloadEl.title !== reloadTitle) {
         btnReloadEl.title = reloadTitle;
     }
+}
+
+function siteIcon(url) {
+    try {
+        const u = new URL(url);
+        if (u.protocol === 'https:' || u.protocol === 'http:') return `${u.origin}/favicon.ico`;
+    } catch {}
+    return null;
+}
+
+// Bookmarks bar: root bookmarks as chips, folders open a native menu.
+function renderBookmarksBar() {
+    const show = Boolean(currentState.settings && currentState.settings.show_bookmarks_bar);
+    bookmarksBarEl.classList.toggle('hidden', !show);
+    if (!show) return;
+    const bookmarks = currentState.bookmarks || [];
+    const key = JSON.stringify(bookmarks.map(b => [b.url, b.title, b.folder]));
+    if (key === lastBarKey) return;
+    lastBarKey = key;
+    bookmarksBarEl.replaceChildren();
+
+    const folders = [...new Set(bookmarks.map(b => b.folder || '').filter(Boolean))];
+    for (const folder of folders) {
+        const chip = document.createElement('button');
+        chip.className = 'bm-chip bm-folder';
+        chip.innerHTML = ICONS.folder;
+        const label = document.createElement('span');
+        label.textContent = folder;
+        chip.appendChild(label);
+        chip.addEventListener('click', () => sendIpc('bookmark_folder_menu', { folder }));
+        bookmarksBarEl.appendChild(chip);
+    }
+    for (const b of bookmarks.filter(b => !b.folder)) {
+        const chip = document.createElement('button');
+        chip.className = 'bm-chip';
+        chip.title = `${b.title}\n${b.url}`;
+        const icon = siteIcon(b.url);
+        const fallback = document.createElement('span');
+        fallback.className = 'bm-letter';
+        fallback.textContent = (b.title || b.url || '?').trim().charAt(0).toUpperCase();
+        if (icon) {
+            const img = document.createElement('img');
+            img.alt = '';
+            img.referrerPolicy = 'no-referrer';
+            img.src = icon;
+            img.addEventListener('error', () => img.replaceWith(fallback), { once: true });
+            chip.appendChild(img);
+        } else {
+            chip.appendChild(fallback);
+        }
+        const label = document.createElement('span');
+        label.textContent = b.title || b.url;
+        chip.appendChild(label);
+        chip.addEventListener('click', () => sendIpc('navigate', { url: b.url }));
+        chip.addEventListener('auxclick', (e) => {
+            if (e.button === 1) sendIpc('new_tab', { url: b.url });
+        });
+        bookmarksBarEl.appendChild(chip);
+    }
+    if (!bookmarks.length) {
+        const empty = document.createElement('span');
+        empty.className = 'bm-empty';
+        empty.textContent = tr('ui.bar_empty', 'Lisää kirjanmerkkejä tähtipainikkeella (Ctrl+D)');
+        bookmarksBarEl.appendChild(empty);
+    }
+}
+
+function renderDownloads() {
+    const d = currentState.downloads || { active: 0, percent: -1, total: 0 };
+    btnDownloadsEl.classList.toggle('hidden', !d.total);
+    btnDownloadsEl.classList.toggle('dl-active', d.active > 0);
+    let text = '';
+    if (d.active > 0) text = d.percent >= 0 ? `${d.percent}%` : String(d.active);
+    downloadsTextEl.textContent = text;
+    downloadsProgressEl.style.width = d.active > 0 && d.percent >= 0 ? `${d.percent}%` : '0';
 }
 
 // Receive State Update from Rust Backend
@@ -287,22 +468,27 @@ window.onBrowserStateUpdate = function(state) {
     // Light updates carry only tabs; merge so bookmarks/settings survive.
     currentState = Object.assign(currentState, state);
     state = currentState;
+    document.documentElement.toggleAttribute('data-private', Boolean(state.private));
     renderTabs();
     renderActiveTab();
+    renderBookmarksBar();
+    renderDownloads();
 
     // Update Adblock button appearance
+    const active = state.tabs.find(t => t.id === state.active_tab_id);
     if (state.settings && state.settings.adblock_enabled) {
         btnAdblockEl.classList.add('shield-active');
-        const active = state.tabs.find(t => t.id === state.active_tab_id);
         const blocked = active && active.blocked ? active.blocked : 0;
-        if (adblockTextEl) adblockTextEl.textContent = blocked ? `Suojattu · ${blocked}` : 'Suojattu';
-        btnAdblockEl.title = blocked
-            ? `${blocked} mainos- tai seurantapyyntöä estetty tällä sivulla`
-            : 'Mainosesto päällä';
+        if (adblockTextEl) adblockTextEl.textContent = blocked
+            ? `${tr('ui.protected', 'Suojattu')} · ${blocked}`
+            : tr('ui.protected', 'Suojattu');
+        btnAdblockEl.title = (blocked
+            ? tr('ui.blocked_n', '{n} mainos- tai seurantapyyntöä estetty tällä sivulla', { n: blocked })
+            : tr('ui.adblock_on', 'Mainosesto päällä')) + ' — ' + tr('ui.shield_click', 'napsauta: sivustokohtaiset asetukset');
     } else {
         btnAdblockEl.classList.remove('shield-active');
-        if (adblockTextEl) adblockTextEl.textContent = 'Ei käytössä';
-        btnAdblockEl.title = 'Mainosesto pois päältä';
+        if (adblockTextEl) adblockTextEl.textContent = tr('ui.off', 'Ei käytössä');
+        btnAdblockEl.title = tr('ui.adblock_off', 'Mainosesto pois päältä');
     }
 
     // Update app update pill button when an update is available or ready
@@ -314,14 +500,14 @@ window.onBrowserStateUpdate = function(state) {
             btnUpdateAppEl.disabled = upd.state === 'downloading';
             const ver = upd.latest_version ? ` v${upd.latest_version}` : '';
             if (upd.state === 'ready') {
-                if (updateAppTextEl) updateAppTextEl.textContent = `Käynnistä uudelleen${ver}`;
-                btnUpdateAppEl.title = `Päivitys${ver} valmiina asennettavaksi — napsauta käynnistääksesi uudelleen`;
+                if (updateAppTextEl) updateAppTextEl.textContent = tr('ui.update_restart', 'Käynnistä uudelleen') + ver;
+                btnUpdateAppEl.title = tr('ui.update_ready', 'Päivitys valmiina asennettavaksi — napsauta käynnistääksesi uudelleen');
             } else if (upd.state === 'downloading') {
-                if (updateAppTextEl) updateAppTextEl.textContent = 'Ladataan...';
-                btnUpdateAppEl.title = 'Ladataan päivitystä...';
+                if (updateAppTextEl) updateAppTextEl.textContent = tr('ui.update_downloading', 'Ladataan...');
+                btnUpdateAppEl.title = tr('ui.update_downloading_title', 'Ladataan päivitystä...');
             } else {
-                if (updateAppTextEl) updateAppTextEl.textContent = `Päivitä${ver}`;
-                btnUpdateAppEl.title = `Uusi versio${ver} saatavilla — napsauta ladataksesi`;
+                if (updateAppTextEl) updateAppTextEl.textContent = tr('ui.update', 'Päivitä') + ver;
+                btnUpdateAppEl.title = tr('ui.update_available', 'Uusi versio saatavilla — napsauta ladataksesi');
             }
         } else {
             btnUpdateAppEl.classList.add('hidden');
@@ -359,35 +545,17 @@ btnNewTabEl.addEventListener('click', () => {
 btnBackEl.addEventListener('click', () => sendIpc('back'));
 btnForwardEl.addEventListener('click', () => sendIpc('forward'));
 btnReloadEl.addEventListener('click', () => sendIpc('reload'));
-
-btnHomeEl.addEventListener('click', () => {
-    sendIpc('navigate', { url: 'browser://newtab' });
-});
-
-btnStarBookmarkEl.addEventListener('click', () => {
-    sendIpc('toggle_bookmark');
-});
-
-btnAdblockEl.addEventListener('click', () => {
-    sendIpc('toggle_adblock');
-});
-
-document.getElementById('btnTheme').addEventListener('click', () => {
-    sendIpc('toggle_theme');
-});
+btnHomeEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://newtab' }));
+btnStarBookmarkEl.addEventListener('click', () => sendIpc('toggle_bookmark'));
+zoomBadgeEl.addEventListener('click', () => sendIpc('zoom', { dir: 0 }));
+btnAdblockEl.addEventListener('click', () => sendIpc('shield_menu'));
+btnDownloadsEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://downloads' }));
+document.getElementById('btnTheme').addEventListener('click', () => sendIpc('toggle_theme'));
 
 // Navigate directly to internal pages on toolbar clicks
-btnBookmarksMenuEl.addEventListener('click', () => {
-    sendIpc('navigate', { url: 'browser://bookmarks' });
-});
-
-btnHistoryMenuEl.addEventListener('click', () => {
-    sendIpc('navigate', { url: 'browser://history' });
-});
-
-btnSettingsMenuEl.addEventListener('click', () => {
-    sendIpc('navigate', { url: 'browser://settings' });
-});
+btnBookmarksMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://bookmarks' }));
+btnHistoryMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://history' }));
+btnSettingsMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://settings' }));
 
 if (btnUpdateAppEl) {
     btnUpdateAppEl.addEventListener('click', () => {
@@ -433,42 +601,58 @@ window.addEventListener('blur', () => {
     }
 });
 
+// No browser context menu on the toolbar itself (the omnibox keeps cut/copy/paste).
+document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('input')) e.preventDefault();
+});
+
 // Keyboard shortcuts inside Chrome UI
 window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'Tab') {
-        e.preventDefault();
+    const ctrl = (e.ctrlKey || e.metaKey) && !e.altKey;
+    const key = (e.key || '').toLowerCase();
+    let handled = true;
+    if (ctrl && key === 'tab') {
         sendIpc('shortcut', { key: e.shiftKey ? 'prev_tab' : 'next_tab' });
-    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && e.shiftKey && e.key.toLowerCase() === 't') {
-        e.preventDefault();
+    } else if (ctrl && e.shiftKey && key === 't') {
         sendIpc('shortcut', { key: 'reopen_tab' });
-    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
-        const key = e.key.toLowerCase();
-        if (/^[1-9]$/.test(key)) {
-            e.preventDefault();
-            sendIpc('shortcut', { key: 'tab_' + key });
-        } else if (key === 't') {
-            e.preventDefault();
-            sendIpc('new_tab', { url: 'browser://newtab' });
-        } else if (key === 'w') {
-            e.preventDefault();
-            sendIpc('close_tab', { id: currentState.active_tab_id });
-        } else if (key === 'l') {
-            e.preventDefault();
-            window.focusOmnibox();
-        } else if (key === 'r') {
-            e.preventDefault();
-            sendIpc('reload');
-        } else if (key === 'd') {
-            e.preventDefault();
-            sendIpc('toggle_bookmark');
-        } else if (key === 'h') {
-            e.preventDefault();
-            sendIpc('navigate', { url: 'browser://history' });
-        }
-    } else if (e.key === 'F5' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        e.preventDefault();
+    } else if (ctrl && e.shiftKey && key === 'n') {
+        sendIpc('private_window');
+    } else if (ctrl && e.shiftKey && key === 'b') {
+        sendIpc('shortcut', { key: 'bookmarks_bar' });
+    } else if ((ctrl && e.shiftKey && key === 'i') || e.key === 'F12') {
+        sendIpc('devtools');
+    } else if (ctrl && !e.shiftKey && /^[1-9]$/.test(key)) {
+        sendIpc('shortcut', { key: 'tab_' + key });
+    } else if (ctrl && (key === '+' || key === '=' || e.code === 'NumpadAdd')) {
+        sendIpc('zoom', { dir: 1 });
+    } else if (ctrl && (key === '-' || e.code === 'NumpadSubtract')) {
+        sendIpc('zoom', { dir: -1 });
+    } else if (ctrl && key === '0') {
+        sendIpc('zoom', { dir: 0 });
+    } else if (ctrl && !e.shiftKey && key === 't') {
+        sendIpc('new_tab', { url: 'browser://newtab' });
+    } else if (ctrl && !e.shiftKey && key === 'w') {
+        sendIpc('close_tab', { id: currentState.active_tab_id });
+    } else if (ctrl && !e.shiftKey && key === 'l') {
+        window.focusOmnibox();
+    } else if (ctrl && !e.shiftKey && key === 'r') {
         sendIpc('reload');
+    } else if (ctrl && !e.shiftKey && key === 'd') {
+        sendIpc('toggle_bookmark');
+    } else if (ctrl && !e.shiftKey && key === 'h') {
+        sendIpc('navigate', { url: 'browser://history' });
+    } else if (ctrl && !e.shiftKey && key === 'j') {
+        sendIpc('navigate', { url: 'browser://downloads' });
+    } else if (ctrl && !e.shiftKey && key === 'f') {
+        sendIpc('find');
+    } else if (ctrl && !e.shiftKey && key === 'p') {
+        sendIpc('print');
+    } else if (e.key === 'F5' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        sendIpc('reload');
+    } else {
+        handled = false;
     }
+    if (handled) e.preventDefault();
 });
 
 // Window Controls (Minimize, Maximize, Close)
@@ -477,6 +661,14 @@ if (btnWinMinimizeEl) {
 }
 if (btnWinMaximizeEl) {
     btnWinMaximizeEl.addEventListener('click', () => sendIpc('maximize'));
+    // Windows 11 Snap Layouts: hovering the maximize button opens the layout flyout.
+    let snapTimer = 0;
+    btnWinMaximizeEl.addEventListener('mouseenter', () => {
+        clearTimeout(snapTimer);
+        snapTimer = setTimeout(() => sendIpc('snap_layouts'), 700);
+    });
+    btnWinMaximizeEl.addEventListener('mouseleave', () => clearTimeout(snapTimer));
+    btnWinMaximizeEl.addEventListener('mousedown', () => clearTimeout(snapTimer));
 }
 if (btnWinCloseEl) {
     btnWinCloseEl.addEventListener('click', () => sendIpc('close'));

@@ -398,6 +398,7 @@ fn run_uninstall(quiet: bool) {
         let _ = fs::remove_file(legacy_start);
     }
     crate::win_platform::remove_uninstall_entry();
+    crate::win_shell::unregister_browser_capabilities();
 
     if delete_user_data {
         if let Some(proj) = directories::ProjectDirs::from("fi", "IT-Veljekset", "Viima") {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selaushistoria — Viima</title>
+    <title data-i18n="hist.page_title">Selaushistoria — Viima</title>
     <link rel="icon" type="image/png" href="viima-logo.png">
     <style>
         :root {
@@ -144,6 +144,9 @@
             border-radius: 10px;
         }
 
+        .private-note { display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; background: rgba(168, 85, 247, 0.14); color: #c084fc; font-size: 13px; }
+        html[data-private] .private-note { display: block; }
+
         .empty-icon {
             opacity: 0.4;
             color: var(--text-dim);
@@ -158,10 +161,12 @@
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
-                <h1 class="title">Selaushistoria</h1>
+                <h1 class="title" data-i18n="hist.title">Selaushistoria</h1>
             </div>
-            <button class="btn-clear" id="btnClearHistory">Tyhjennä historia</button>
+            <button class="btn-clear" id="btnClearHistory" data-i18n="hist.clear">Tyhjennä historia</button>
         </div>
+
+        <div class="private-note" data-i18n="hist.private">Yksityinen ikkuna: tässä ikkunassa avattuja sivuja ei tallenneta historiaan.</div>
 
         <div class="search-box">
             <span class="search-icon">
@@ -170,40 +175,31 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
             </span>
-            <input type="text" class="search-bar" id="historySearch" placeholder="Hae historiasta...">
+            <input type="text" class="search-bar" id="historySearch" placeholder="Hae historiasta..." data-i18n-placeholder="hist.search">
         </div>
 
         <div class="history-list" id="historyList">
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                </div>
-                <span>Selaushistoria tallentuu automaattisesti käydyistä sivuista.</span>
-            </div>
+            <div class="empty-state" data-i18n="hist.hint">Selaushistoria tallentuu automaattisesti käydyistä sivuista.</div>
         </div>
     </div>
 
+    <script src="i18n.js"></script>
     <script>
         const btnClear = document.getElementById('btnClearHistory');
         const historyList = document.getElementById('historyList');
         const historySearch = document.getElementById('historySearch');
-        let currentHistory = [];
+        const send = (action, payload = {}) => window.ipc?.postMessage(JSON.stringify({ action, ...payload }));
+        const dateFormat = new Intl.DateTimeFormat(window.viimaLang === 'en' ? 'en-GB' : 'fi-FI', { dateStyle: 'medium', timeStyle: 'short' });
+        let searchTimer = 0;
 
-        function formatVisited(timestamp) {
-            return new Intl.DateTimeFormat('fi-FI', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(timestamp * 1000));
-        }
-
-        function renderHistory() {
-            const query = historySearch.value.trim().toLocaleLowerCase('fi');
-            const items = currentHistory.filter(item => `${item.title} ${item.url}`.toLocaleLowerCase('fi').includes(query));
+        function renderHistory(items, query) {
             historyList.replaceChildren();
             if (!items.length) {
                 const empty = document.createElement('div');
                 empty.className = 'empty-state';
-                empty.textContent = currentHistory.length ? 'Hakua vastaavia sivuja ei löytynyt.' : 'Selaushistoria on tyhjä.';
+                empty.textContent = query
+                    ? t('hist.no_results', 'Hakua vastaavia sivuja ei löytynyt.')
+                    : t('hist.empty', 'Selaushistoria on tyhjä.');
                 historyList.appendChild(empty);
                 return;
             }
@@ -221,14 +217,16 @@
                 url.textContent = item.url;
                 const time = document.createElement('div');
                 time.className = 'history-time';
-                const visits = item.visit_count === 1 ? '1 käynti' : `${item.visit_count} käyntiä`;
-                time.textContent = `${formatVisited(item.visited_at)} · ${visits}`;
+                const visits = item.visit_count === 1
+                    ? t('hist.visit_1', '1 käynti')
+                    : t('hist.visits', '{n} käyntiä', { n: item.visit_count });
+                time.textContent = `${dateFormat.format(new Date(item.visited_at * 1000))} · ${visits}`;
                 link.append(title, url, time);
                 const remove = document.createElement('button');
                 remove.className = 'btn-clear';
                 remove.type = 'button';
-                remove.textContent = 'Poista';
-                remove.addEventListener('click', () => window.ipc?.postMessage(JSON.stringify({ action: 'delete_history_item', url: item.url })));
+                remove.textContent = t('hist.delete', 'Poista');
+                remove.addEventListener('click', () => send('delete_history_item', { url: item.url }));
                 row.append(link, remove);
                 historyList.appendChild(row);
             }
@@ -238,16 +236,20 @@
             if (state.settings && typeof state.settings.dark_mode === 'boolean') {
                 document.documentElement.dataset.theme = state.settings.dark_mode ? 'dark' : 'light';
             }
-            currentHistory = state.history || [];
-            renderHistory();
+            if (state.history) renderHistory(state.history, state.history_query || '');
         };
-        historySearch.addEventListener('input', renderHistory);
+        // Full-text search runs in SQLite (FTS5): the whole history, not just the latest pages.
+        historySearch.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => send('search_history', { q: historySearch.value.trim() }), 150);
+        });
         btnClear.addEventListener('click', () => {
-            if (confirm("Haluatko varmasti tyhjentää koko selaushistorian?")) {
-                window.ipc?.postMessage(JSON.stringify({ action: 'clear_history' }));
+            if (confirm(t('hist.confirm', 'Haluatko varmasti tyhjentää koko selaushistorian?'))) {
+                send('clear_history');
             }
         });
-        window.ipc?.postMessage(JSON.stringify({ action: 'request_initial_state' }));
+        // A freshly opened page starts with an empty search.
+        send('search_history', { q: '' });
     </script>
 </body>
 </html>

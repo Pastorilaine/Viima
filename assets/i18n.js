@@ -1,0 +1,230 @@
+// Viima UI translations. Finnish is written in the pages themselves; this file holds English.
+// The language comes from <html lang>, stamped by the browser when it serves the page.
+//   data-i18n="key"             -> textContent
+//   data-i18n-title="key"       -> title attribute
+//   data-i18n-placeholder="key" -> placeholder attribute
+//   t('key', 'suomeksi', { n: 3 }) in scripts ({n} placeholders)
+(function () {
+    const EN = {
+        // Chrome UI
+        'ui.private': 'Private',
+        'ui.private_title': 'Private window: history, cookies and site data are not saved',
+        'ui.new_tab': 'New tab',
+        'ui.new_tab_title': 'Open a new tab (Ctrl+T)',
+        'ui.close_tab': 'Close tab (Ctrl+W)',
+        'ui.minimize': 'Minimize',
+        'ui.maximize': 'Maximize / Restore',
+        'ui.close': 'Close',
+        'ui.back': 'Back (Alt+Left)',
+        'ui.forward': 'Forward (Alt+Right)',
+        'ui.reload': 'Reload (Ctrl+R / F5)',
+        'ui.loading': 'Loading... (click to reload)',
+        'ui.home': 'Home page',
+        'ui.omnibox': 'Type a web address or search the web...',
+        'ui.zoom_reset': 'Reset zoom to 100% (Ctrl+0)',
+        'ui.bookmark_add': 'Bookmark this page (Ctrl+D)',
+        'ui.bookmark_remove': 'Remove bookmark',
+        'ui.downloads': 'Downloads (Ctrl+J)',
+        'ui.theme': 'Switch light / dark theme',
+        'ui.bookmarks': 'Bookmarks (Ctrl+Shift+B: bookmarks bar)',
+        'ui.history': 'History (Ctrl+H)',
+        'ui.settings': 'Settings',
+        'ui.insecure': 'Connection is not encrypted (http). Do not enter passwords.',
+        'ui.mute': 'Mute tab',
+        'ui.unmute': 'Unmute tab',
+        'ui.sleeping': 'sleeping',
+        'ui.protected': 'Protected',
+        'ui.blocked_n': '{n} ad or tracking requests blocked on this page',
+        'ui.adblock_on': 'Ad blocking on',
+        'ui.adblock_off': 'Ad blocking off',
+        'ui.shield_click': 'click for site settings',
+        'ui.off': 'Off',
+        'ui.update': 'Update',
+        'ui.update_restart': 'Restart',
+        'ui.update_ready': 'Update ready to install — click to restart',
+        'ui.update_downloading': 'Downloading...',
+        'ui.update_downloading_title': 'Downloading the update...',
+        'ui.update_available': 'A new version is available — click to download',
+        'ui.bar_empty': 'Add bookmarks with the star button (Ctrl+D)',
+
+        // Downloads
+        'dl.page_title': 'Downloads — Viima',
+        'dl.title': 'Downloads',
+        'dl.clear': 'Clear list',
+        'dl.empty': 'No downloads. Files are saved to your Downloads folder.',
+        'dl.cancel': 'Cancel',
+        'dl.open': 'Open',
+        'dl.show': 'Show in folder',
+        'dl.failed': 'Interrupted or canceled',
+        'dl.retry': 'Retry',
+        'dl.remove': 'Remove from list',
+
+        // HTTPS warning
+        'ins.page_title': 'Connection not secure — Viima',
+        'ins.title': 'This site does not support a secure connection',
+        'ins.body': 'HTTPS-Only mode is on, but a secure (https) connection to this address failed. On an unencrypted connection, others on the network can see or change the page.',
+        'ins.advice': 'Do not enter passwords or payment details on an unencrypted page.',
+        'ins.back': 'Go back to safety',
+        'ins.continue': 'Continue unencrypted',
+
+        // History
+        'hist.page_title': 'History — Viima',
+        'hist.title': 'History',
+        'hist.clear': 'Clear history',
+        'hist.search': 'Search history...',
+        'hist.hint': 'Browsing history is saved automatically from the pages you visit.',
+        'hist.no_results': 'No pages match your search.',
+        'hist.empty': 'Your browsing history is empty.',
+        'hist.visit_1': '1 visit',
+        'hist.visits': '{n} visits',
+        'hist.delete': 'Delete',
+        'hist.confirm': 'Clear your entire browsing history?',
+        'hist.private': 'Private window: pages you visit here are not saved to history.',
+
+        // Bookmarks
+        'bm.page_title': 'Bookmarks — Viima',
+        'bm.title': 'Bookmarks',
+        'bm.import': 'Import HTML',
+        'bm.export': 'Export HTML',
+        'bm.empty': 'No bookmarks saved yet.',
+        'bm.remove': 'Remove bookmark',
+        'bm.folder': 'Folder',
+        'bm.bar': 'Bookmarks bar',
+        'bm.folder_hint': 'Empty = bookmarks bar. Type a folder name to move the bookmark.',
+        'bm.imported': '{n} bookmarks imported.',
+        'bm.import_none': 'No new bookmarks found in the file.',
+        'bm.toggle_bar': 'Show bookmarks bar',
+
+        // Settings
+        'set.page_title': 'Settings — Viima',
+        'set.title': 'Browser settings',
+        'set.search': 'Search & address bar',
+        'set.engine': 'Default search engine',
+        'set.engine_desc': 'Used for searches from the address bar and the start page',
+        'set.bangs': 'Quick searches (bang commands)',
+        'set.bangs_desc': 'Search a site directly, e.g. !g rust, !yt video, !w finland, !gh linux',
+        'set.always_on': 'Always on',
+        'set.appearance': 'Appearance',
+        'set.dark': 'Dark theme',
+        'set.dark_desc': 'Switch the browser and internal pages between dark and light',
+        'set.language': 'Language',
+        'set.language_desc': 'Language of the browser interface',
+        'set.bar': 'Bookmarks bar',
+        'set.bar_desc': 'Show bookmarks under the address bar (Ctrl+Shift+B)',
+        'set.security': 'Security & privacy',
+        'set.adblock': 'Block ads and trackers',
+        'set.adblock_desc': 'Blocks known ad networks, analytics trackers and pop-ups',
+        'set.lists': 'Filter lists (EasyList, EasyPrivacy, Peter Lowe)',
+        'set.lists_desc': 'Downloads community block lists weekly in the background',
+        'set.lists_update': 'Update now',
+        'set.lists_updating': 'Updating...',
+        'set.lists_status': '{n} rules · updated {d}',
+        'set.lists_never': 'Not downloaded yet',
+        'set.cookies': 'Hide cookie banners',
+        'set.cookies_desc': 'Hides consent pop-ups. Nothing is accepted on your behalf.',
+        'set.https': 'HTTPS-Only mode',
+        'set.https_desc': 'Upgrades every connection to https and warns before opening an unencrypted page',
+        'set.site_data': 'Cookies and site data',
+        'set.site_data_desc': 'See which sites store cookies and delete one site without signing out of the others',
+        'set.site_data_show': 'Show sites',
+        'set.site_data_empty': 'No cookies stored.',
+        'set.site_data_count': '{n} cookies',
+        'set.delete': 'Delete',
+        'set.clear_history': 'Clear browsing history',
+        'set.clear_history_desc': 'Deletes all locally saved browsing history',
+        'set.clear_history_btn': 'Clear history',
+        'set.private': 'New private window',
+        'set.private_desc': 'Browse without saving history, cookies or site data (Ctrl+Shift+N)',
+        'set.private_btn': 'Open private window',
+        'set.system': 'System',
+        'set.default': 'Default browser',
+        'set.default_desc': 'Open links from other apps in Viima. Opens Windows "Default apps".',
+        'set.default_btn': 'Make Viima the default browser',
+        'set.sleeping': 'Sleeping tabs',
+        'set.sleeping_desc': 'Unloads tabs that have been in the background for 30 minutes to save memory',
+        'set.devtools': 'Developer tools',
+        'set.devtools_desc': 'F12, Ctrl+Shift+I and "Inspect" in the page menu',
+        'set.updates': 'Updates',
+        'set.update_status': 'App update status (v{v})',
+        'set.update_desc': 'Check for updates from GitHub releases.',
+        'set.auto_update': 'Automatic updates',
+        'set.auto_update_desc': 'Downloads new versions in the background on startup (installed version).',
+        'set.update_url': 'Update source (HTTPS URL)',
+        'set.update_url_desc': 'Address of a latest.json file or the GitHub Releases API',
+        'set.save': 'Save',
+        'set.about': 'About',
+        'set.shortcuts': 'Keyboard shortcuts',
+        'set.shortcuts_desc': 'Ctrl+T new tab • Ctrl+W close • Ctrl+Shift+T reopen • Ctrl+F find • Ctrl +/-/0 zoom • Ctrl+P print • Ctrl+J downloads • Ctrl+Shift+N private window • Ctrl+Shift+B bookmarks bar • F12 developer tools',
+        'set.upd_checking': 'Checking...',
+        'set.upd_checking_desc': 'Contacting the update server...',
+        'set.upd_ok': 'Up to date',
+        'set.upd_ok_desc': 'Viima v{v} is the latest release.',
+        'set.upd_again': 'Check again',
+        'set.upd_available': 'Available {v}',
+        'set.upd_available_desc': 'A new version {v} is available.',
+        'set.upd_available_dev': 'New version {v} available (self-update needs the installed version).',
+        'set.upd_download': 'Download update',
+        'set.upd_downloading': 'Downloading...',
+        'set.upd_downloading_desc': 'Downloading and verifying version {v}...',
+        'set.upd_ready': 'Ready {v}',
+        'set.upd_ready_desc': 'Version {v} is downloaded and verified. Restart to install.',
+        'set.upd_restart': 'Restart and update',
+        'set.upd_error': 'Error',
+        'set.upd_error_desc': 'Update check failed.',
+        'set.upd_retry': 'Try again',
+        'set.upd_idle': 'Ready',
+        'set.upd_dev': 'Development build',
+        'set.upd_idle_desc': 'Check for available updates.',
+        'set.upd_dev_desc': 'Checking works; automatic replacement is enabled in the installed version.',
+        'set.upd_check': 'Check for updates',
+        'set.confirm_history': 'Clear your entire browsing history?',
+
+        // New tab page
+        'nt.page_title': 'New tab — Viima',
+        'nt.welcome': 'Welcome to Viima',
+        'nt.search': 'Search the web or type an address...',
+        'nt.footer': 'Viima v{v} • IT-Veljekset Group • Secure, fast and light',
+        'nt.wallpaper': 'Wallpaper',
+        'nt.wallpaper_title': 'Change the start page wallpaper',
+        'nt.wallpaper_menu': 'Start page background',
+        'nt.wp_auto': 'Automatic (theme)',
+        'nt.wp_aurora': 'Northern lights (dark)',
+        'nt.wp_glass': 'Glass waves (dark)',
+        'nt.wp_nordic': 'Nordic morning (light)',
+        'nt.wp_none': 'Plain gradient',
+        'nt.morning': 'Good morning!',
+        'nt.day': 'Have a nice day!',
+        'nt.evening': 'Good evening!',
+        'nt.night': 'Good night!',
+        'nt.private': 'You are in a private window. History, cookies and site data are deleted when you close it.',
+    };
+
+    const lang = document.documentElement.lang === 'en' ? 'en' : 'fi';
+    window.viimaLang = lang;
+
+    window.t = function (key, fi, vars) {
+        let s = (lang === 'en' && EN[key]) || fi;
+        if (vars) {
+            for (const k of Object.keys(vars)) s = s.split('{' + k + '}').join(String(vars[k]));
+        }
+        return s;
+    };
+
+    function apply(root) {
+        if (lang !== 'en') return;
+        root.querySelectorAll('[data-i18n]').forEach(el => {
+            const v = EN[el.dataset.i18n];
+            if (v) el.textContent = v;
+        });
+        root.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const v = EN[el.dataset.i18nTitle];
+            if (v) el.title = v;
+        });
+        root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const v = EN[el.dataset.i18nPlaceholder];
+            if (v) el.placeholder = v;
+        });
+    }
+    window.applyI18n = apply;
+    apply(document);
+})();
