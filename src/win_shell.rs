@@ -331,7 +331,9 @@ fn reg_set(path: &str, name: &str, value: &str) -> Result<(), String> {
 /// Registers Viima under "Default apps" (http/https, .htm/.html/.pdf) for the current user.
 pub fn register_browser_capabilities(exe: &Path) -> Result<(), String> {
     let exe = exe.to_string_lossy();
-    let open_cmd = format!("\"{exe}\" \"%1\"");
+    // Everything after the sentinel is one URL/path, never flags (a crafted link with a quote
+    // must not be able to inject e.g. `--uninstall`). Same approach as Chromium.
+    let open_cmd = format!("\"{exe}\" --single-argument %1");
     let icon = format!("{exe},0");
     let caps = format!(r"{CLIENT_KEY}\Capabilities");
     for (progid, desc) in [(PROGID_URL, "Viima URL"), (PROGID_HTML, "Viima HTML Document")] {

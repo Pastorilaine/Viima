@@ -5,6 +5,13 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.4.1] - 2026-11-13
+
+### 🔒 Tietoturva (Security)
+- Oletusselaimen linkkikäsittelijä käyttää nyt `--single-argument`-erotinta: muokattu linkki ei voi enää syöttää komentorivilippuja (esim. `--uninstall`). Asennettu Viima päivittää rekisteröinnin automaattisesti käynnistyessään.
+
+---
+
 ## [0.4.0] - 2026-11-13
 
 ### 🌟 Uutta (Added)

@@ -26,6 +26,12 @@ use tao::{
 
 /// Command line: `viima.exe [--private] [url | file path ...]`. Internal flags are skipped.
 fn parse_cli(args: &[String]) -> (bool, Vec<String>) {
+    // Shell association launch: the rest is one target, no flag processing at all.
+    if args.first().map(String::as_str) == Some(SINGLE_ARG) {
+        let target = args[1..].join(" ");
+        let target = target.trim();
+        return (false, if target.is_empty() { vec![] } else { vec![cli_target(target)] });
+    }
     let mut private = false;
     let mut urls = Vec::new();
     let mut skip_next = false;
@@ -56,11 +62,13 @@ fn cli_target(arg: &str) -> String {
     arg.to_string()
 }
 
+const SINGLE_ARG: &str = "--single-argument";
+
 fn main() {
-    if updater::handle_cli_args() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) != Some(SINGLE_ARG) && updater::handle_cli_args() {
         return;
     }
-    let args: Vec<String> = std::env::args().skip(1).collect();
     let (private, urls) = parse_cli(&args);
 
     // A second normal launch (e.g. a link clicked in another app) goes to the open window.
@@ -168,6 +176,11 @@ mod tests {
         assert_eq!(
             parse_cli(&args(&["--cleanup-update", r"C:\x\Viima-staged.exe"])),
             (false, vec![])
+        );
+        // Quote-injected link from the shell: flags after the sentinel are just URL text.
+        assert_eq!(
+            parse_cli(&args(&["--single-argument", "http://x/", "--uninstall", "--private"])),
+            (false, vec!["http://x/ --uninstall --private".to_string()])
         );
         let (_, urls) = parse_cli(&args(&["Cargo.toml"]));
         assert!(urls[0].starts_with("file:///"), "{urls:?}");
