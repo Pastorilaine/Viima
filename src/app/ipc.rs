@@ -34,6 +34,7 @@ fn shortcut(key: &str) -> Option<AppEvent> {
         "private_window" => AppEvent::IpcNewPrivateWindow,
         "bookmarks_bar" => AppEvent::IpcSetSetting("toggle_bookmarks_bar".into(), Value::Null),
         "bookmark" => AppEvent::IpcToggleBookmark,
+        "pip" => AppEvent::IpcPip,
         k if k.starts_with("tab_") => match k[4..].parse::<usize>() {
             Ok(9) => AppEvent::IpcSelectTab(usize::MAX),
             Ok(i @ 1..=8) => AppEvent::IpcSelectTab(i - 1),
@@ -57,6 +58,7 @@ pub fn shortcut_for_key(vk: u32, ctrl: bool, shift: bool, alt: bool) -> Option<A
         (b'T', true) => "reopen_tab",
         (b'N', true) => "private_window",
         (b'B', true) => "bookmarks_bar",
+        (b'P', true) => "pip",
         (d @ b'1'..=b'9', false) => return shortcut(&format!("tab_{}", d as char)),
         (b'T', false) => "new_tab",
         (b'W', false) => "close_tab",
@@ -73,10 +75,20 @@ pub fn shortcut_for_key(vk: u32, ctrl: bool, shift: bool, alt: bool) -> Option<A
 pub fn parse(body: &str, trusted: bool, tab_id: Option<usize>) -> Option<AppEvent> {
     let v: Value = serde_json::from_str(body).ok()?;
     let action = v.get("action")?.as_str()?;
-    if !trusted && action != "favicon" {
+    if !trusted && !matches!(action, "favicon" | "pip_ui") {
         return None;
     }
     Some(match action {
+        // The floating player's controls live in the page itself, so any page may send this;
+        // it is only acted on for the tab that is really popped out, and only these commands.
+        "pip_ui" => {
+            let cmd = v.get("cmd")?.as_str()?;
+            if !super::pip::UI_COMMANDS.contains(&cmd) {
+                return None;
+            }
+            let dir: String = s(&v, "dir").unwrap_or_default().chars().take(16).collect();
+            AppEvent::PipUi(tab_id?, cmd.to_string(), dir)
+        }
         "shortcut" => shortcut(v.get("key")?.as_str()?)?,
         // Sent by any page: only ever shown as an <img> in the tab strip.
         "favicon" => {
@@ -212,6 +224,22 @@ mod tests {
             assert!(parse(body, true, None).is_some(), "{body}");
         }
         assert!(parse(r#"{"action":"set_extension","id":"x"}"#, true, None).is_none());
+    }
+
+    #[test]
+    fn test_pip_ui_commands() {
+        // sent by the player's controls inside a web page: allowed, tagged with the sender's tab
+        let back = r#"{"action":"pip_ui","cmd":"back","dir":""}"#;
+        assert!(matches!(parse(back, false, Some(7)), Some(AppEvent::PipUi(7, c, _)) if c == "back"));
+        assert!(parse(back, false, None).is_none());
+        // only the fixed command list
+        assert!(parse(r#"{"action":"pip_ui","cmd":"navigate"}"#, false, Some(7)).is_none());
+        // a page still can't press browser shortcuts
+        assert!(parse(r#"{"action":"shortcut","key":"pip"}"#, false, Some(1)).is_none());
+        assert!(matches!(
+            parse(r#"{"action":"shortcut","key":"pip"}"#, true, None),
+            Some(AppEvent::IpcPip)
+        ));
     }
 
     #[test]

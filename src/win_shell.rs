@@ -125,6 +125,61 @@ pub fn install_copydata_hook(hwnd: isize, callback: CopyDataCallback) {
     }
 }
 
+unsafe extern "system" fn aspect_subclass_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    _id: usize,
+    _data: usize,
+) -> LRESULT {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::UI::Shell::DefSubclassProc;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        WM_SIZING, WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT, WMSZ_TOP,
+        WMSZ_TOPLEFT, WMSZ_TOPRIGHT,
+    };
+    unsafe {
+        if msg == WM_SIZING && lparam.0 != 0 {
+            let ratio = f64::from_bits(ASPECT.load(std::sync::atomic::Ordering::Relaxed));
+            if ratio.is_nan() || ratio <= 0.0 {
+                return DefSubclassProc(hwnd, msg, wparam, lparam);
+            }
+            let r = &mut *(lparam.0 as *mut RECT);
+            let (w, h) = ((r.right - r.left) as f64, (r.bottom - r.top) as f64);
+            match wparam.0 as u32 {
+                // sides: the other dimension follows
+                WMSZ_LEFT | WMSZ_RIGHT => r.bottom = r.top + (w / ratio).round() as i32,
+                WMSZ_TOP | WMSZ_BOTTOM => r.right = r.left + (h * ratio).round() as i32,
+                // corners: the width leads, the height follows on the moving side
+                WMSZ_TOPLEFT | WMSZ_TOPRIGHT => r.top = r.bottom - (w / ratio).round() as i32,
+                WMSZ_BOTTOMLEFT | WMSZ_BOTTOMRIGHT => r.bottom = r.top + (w / ratio).round() as i32,
+                _ => {}
+            }
+            return LRESULT(1);
+        }
+        DefSubclassProc(hwnd, msg, wparam, lparam)
+    }
+}
+
+/// Ratio (f64 bits) the floating video player keeps; there is only ever one such window.
+static ASPECT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Changes the ratio of the window locked with `lock_aspect_ratio` (the video changed shape).
+pub fn set_aspect_ratio(ratio: f64) {
+    ASPECT.store(ratio.to_bits(), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Keeps the window's width:height ratio while the user drags its edges or corners, so width
+/// and height always scale together (floating video player). Lasts as long as the window.
+pub fn lock_aspect_ratio(hwnd: isize, ratio: f64) {
+    use windows::Win32::UI::Shell::SetWindowSubclass;
+    set_aspect_ratio(ratio);
+    unsafe {
+        let _ = SetWindowSubclass(HWND(hwnd as *mut _), Some(aspect_subclass_proc), 2, 0);
+    }
+}
+
 /// Brings the window to the front even when it is minimized.
 pub fn bring_to_front(hwnd: isize) {
     use windows::Win32::UI::WindowsAndMessaging::{

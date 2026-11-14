@@ -140,6 +140,8 @@
         'set.default': 'Default browser',
         'set.default_desc': 'Open links from other apps in Viima. Opens Windows "Default apps".',
         'set.default_btn': 'Make Viima the default browser',
+        'set.auto_pip': 'Pop out playing video',
+        'set.auto_pip_desc': 'When you leave a tab with a playing video, it keeps playing in a small window. Manually: Ctrl+Shift+P or the tab menu.',
         'set.sleeping': 'Sleeping tabs',
         'set.sleeping_desc': 'Unloads tabs that have been in the background for 30 minutes to save memory',
         'set.devtools': 'Developer tools',

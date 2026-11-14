@@ -30,8 +30,7 @@ pub const INTERNAL_PAGES: &[&str] = &[
     "bookmarks",
     "settings",
     "downloads",
-    "insecure",
-];
+    "insecure",];
 
 /// True for any `browser://` page or its WebView2 `http://browser.<name>/` mapping.
 pub fn is_internal_url(url: &str) -> bool {
@@ -139,6 +138,8 @@ pub struct BrowserSettings {
     pub hide_cookie_banners: bool,
     pub devtools_enabled: bool,
     pub sleeping_tabs: bool,
+    /// Leaving a tab with a playing video opens it in the floating player.
+    pub auto_pip: bool,
     /// Download EasyList & co. weekly on top of the built-in block list.
     pub adblock_lists: bool,
     /// Unix time of the last successful filter list download (0 = never).
@@ -180,6 +181,7 @@ impl Default for BrowserSettings {
             hide_cookie_banners: true,
             devtools_enabled: false,
             sleeping_tabs: true,
+            auto_pip: true,
             adblock_lists: true,
             adblock_lists_updated: 0,
             adblock_rule_count: 0,
@@ -688,6 +690,7 @@ impl StorageManager {
             }
             ("devtools_enabled", Some(v)) => std::mem::replace(&mut s.devtools_enabled, v) != v,
             ("sleeping_tabs", Some(v)) => std::mem::replace(&mut s.sleeping_tabs, v) != v,
+            ("auto_pip", Some(v)) => std::mem::replace(&mut s.auto_pip, v) != v,
             ("adblock_lists", Some(v)) => std::mem::replace(&mut s.adblock_lists, v) != v,
             ("language", None) => match value.as_str() {
                 Some(l @ ("fi" | "en")) if s.language != l => {

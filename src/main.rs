@@ -144,13 +144,17 @@ fn main() {
     let window = std::rc::Rc::new(window);
     let mut browser = BrowserApp::new(window, proxy, private, urls);
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, target, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
             Event::UserEvent(app_event) => {
-                if browser.handle_event(app_event) {
+                if browser.handle_event(app_event, target) {
                     *control_flow = ControlFlow::Exit;
                 }
+            }
+            // The floating video player has its own window.
+            Event::WindowEvent { window_id, event, .. } if Some(window_id) == browser.pip_window_id() => {
+                browser.on_pip_window_event(&event);
             }
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),

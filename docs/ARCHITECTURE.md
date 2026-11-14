@@ -21,9 +21,10 @@ jossa on yksi *käyttöliittymä-webview* (välilehtirivi, osoiterivi) ja yksi w
 |---|---|
 | `src/main.rs` | Sisääntulo, komentorivi (`--private`, URL), ikkuna, tapahtumasilmukka, yksi käynnissä oleva ikkuna |
 | `src/app/mod.rs` | `BrowserApp`, `AppEvent`-tapahtumat, `push_state` (tila sivuille), `flush` (sulkeminen) |
-| `src/app/ipc.rs` | **Luottamusraja**: JSON-viestit → `AppEvent`. Web-sivu saa lähettää vain `favicon` |
+| `src/app/ipc.rs` | **Luottamusraja**: JSON-viestit → `AppEvent`. Web-sivu saa lähettää vain `favicon` ja `pip_ui` |
 | `src/app/protocol.rs` | `browser://`-protokolla: sisäsivut upotettuna binääriin, CSP, `{{VERSION}}` |
 | `src/app/tabs.rs` | Välilehtien luonti (webview-asetukset), istunnon tallennus ja palautus |
+| `src/app/pip.rs`, `assets/inject/pip.js` | Leijuva videosoitin: välilehden webview siirretään (`reparent`) omaan ikkunaan, sivun skripti näyttää vain videon ja piirtää säätimet. Sivu saa lähettää vain `pip_ui`-komennot, ja vain avoimen soittimen välilehdelle |
 | `src/app/features.rs` | Valikot, zoom, lataukset, asetusten sivuvaikutukset, laajennuslista, ajastin |
 | `src/app/remote.rs` | Faviconit, widgetien verkkohaut, aloitussivun tallennetut valinnat |
 | `src/extensions.rs` | Laajennuskansiot (ks. [EXTENSIONS.md](EXTENSIONS.md)) |

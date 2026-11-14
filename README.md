@@ -42,6 +42,7 @@
 - **🖼️ Oikeat faviconit**: sivustojen ikonit haetaan ja tallennetaan välimuistiin, joten ne näkyvät välilehdissä, kirjanmerkeissä ja aloitussivulla myös uudelleenkäynnistyksen jälkeen.
 - **💾 Kaikki säilyy**: asetukset, kirjanmerkit, avoimet välilehdet, ikkunan koko, aloitussivun asettelu ja taustakuva tallentuvat heti ja palautuvat uudelleenkäynnistyksessä ja koneen käynnistyksen jälkeen. Tarkka luettelo: [Mitä tallentuu ja minne](docs/ARCHITECTURE.md#mitä-tallentuu-ja-minne).
 - **⚙️ Asetukset sivunavigaatiolla**: Yleiset, Ulkoasu, Tietosuoja ja turvallisuus, Laajennukset, Päivitykset ja Tietoja. Uuden osion lisääminen on yksi linkki ja yksi `<section>`.
+- **🎬 Leijuva videosoitin**: kun vaihdat pois soivalta videolta, se jatkuu pienessä ikkunassa (toisto, haku, ääni, takaisin välilehteen; koko muuttuu kuvasuhde säilyttäen). Ctrl+Shift+P käsin.
 - **🧩 Laajennukset**: purettu Chromium-laajennus (Manifest V3) toimii kopioimalla kansio laajennuskansioon. Hallinta Asetuksissa. Opas: [docs/EXTENSIONS.md](docs/EXTENSIONS.md).
 - **✨ Animaatiot**: välilehden avautuminen ja sulkeutuminen, painikkeiden painallukset, valikot ja asetussivun osiot. Ne kunnioittavat Windowsin "vähennä animaatioita" -asetusta.
 - **🗂️ Sisäsivut omissa välilehdissään**: kirjanmerkit, historia, lataukset ja asetukset avautuvat uuteen välilehteen (jo auki oleva käytetään uudelleen).
@@ -116,6 +117,7 @@ viima/
 │   │   ├── ipc.rs              # Käyttöliittymän ja sisäsivujen viestit, luottamusrajat
 │   │   ├── protocol.rs         # browser://-sisäsivujen tarjoilu ja CSP
 │   │   ├── tabs.rs             # Välilehtien luonti ja istunnon palautus
+│   │   ├── pip.rs              # Leijuva videosoitin
 │   │   ├── features.rs         # Valikot, zoom, lataukset, asetukset, yksityinen ikkuna
 │   │   └── remote.rs           # Faviconit ja widgetien (sää, kurssit) verkkohaut
 │   ├── tab.rs                  # Välilehden tila

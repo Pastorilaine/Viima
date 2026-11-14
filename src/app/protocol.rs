@@ -51,8 +51,7 @@ fn asset(host: &str, path: &str) -> Option<(&'static str, &'static [u8])> {
             HTML,
             include_bytes!("../../assets/internal/downloads.html"),
         ),
-        ("insecure", _) => (HTML, include_bytes!("../../assets/internal/insecure.html")),
-        _ => return None,
+        ("insecure", _) => (HTML, include_bytes!("../../assets/internal/insecure.html")),        _ => return None,
     })
 }
 

@@ -1,5 +1,6 @@
 mod features;
 pub(crate) mod ipc;
+mod pip;
 mod protocol;
 mod remote;
 mod tabs;
@@ -22,7 +23,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use tao::dpi::PhysicalSize;
-use tao::event_loop::EventLoopProxy;
+use tao::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use tao::window::Window;
 use wry::{
     PageLoadEvent, Rect, Theme, WebContext, WebView, WebViewBuilder, WebViewBuilderExtWindows,
@@ -120,6 +121,10 @@ pub enum AppEvent {
     IpcUpdateFilterLists,
     IpcAllowHttp(String),
     IpcSnapLayouts,
+    /// Ctrl+Shift+P: pop the active tab's video out (or bring it back).
+    IpcPip,
+    /// (tab, command, direction) from the controls drawn in the floating player.
+    PipUi(usize, String, String),
     IpcMinimize,
     IpcMaximize,
     IpcClose,
@@ -155,6 +160,13 @@ pub enum AppEvent {
         result: Result<String, String>,
     },
     FilterListsUpdated(Result<usize, String>),
+    /// Answer to "does this tab have a playing video?" (floating player).
+    /// `size` is the video's pixel size, None when the tab has no playing video.
+    PipFound {
+        tab: usize,
+        manual: bool,
+        size: Option<(u32, u32)>,
+    },
     Tick,
     UpdateCheckFinished {
         manual: bool,
@@ -310,6 +322,8 @@ pub struct BrowserApp {
     extensions_path: Option<PathBuf>,
     /// Extension ids that were loaded at startup; Settings compares against this.
     extensions_started: Vec<String>,
+    /// Floating video player, if one is open.
+    pip: Option<pip::Pip>,
 }
 
 impl BrowserApp {
@@ -425,6 +439,7 @@ impl BrowserApp {
                 .map(|_| crate::extensions::list().into_iter().filter(|e| e.enabled).map(|e| e.id).collect())
                 .unwrap_or_default(),
             extensions_path,
+            pip: None,
         };
         app.layout();
 
@@ -533,7 +548,7 @@ impl BrowserApp {
     }
 
     /// Handles one event; returns true when the app should exit.
-    pub fn handle_event(&mut self, event: AppEvent) -> bool {
+    pub fn handle_event(&mut self, event: AppEvent, target: &EventLoopWindowTarget<AppEvent>) -> bool {
         use AppEvent::*;
         match event {
             IpcNewTab(url) => self.new_tab(url),
@@ -661,6 +676,9 @@ impl BrowserApp {
                 #[cfg(windows)]
                 crate::win_shell::show_snap_layouts(self.hwnd());
             }
+            IpcPip => self.toggle_pip(self.active_tab_id),
+            PipUi(tab, cmd, dir) => self.pip_ui(tab, &cmd, &dir),
+            PipFound { tab, manual, size } => self.on_pip_found(target, tab, manual, size),
             IpcMinimize => self.window.set_minimized(true),
             IpcMaximize => self.window.set_maximized(!self.window.is_maximized()),
             IpcClose => {
@@ -859,10 +877,13 @@ impl BrowserApp {
             .as_deref()
             .is_some_and(|s| self.storage.is_adblock_allowed(s));
         let zoom = site.as_deref().map_or(1.0, |s| self.storage.site_zoom(s));
+        let in_pip = self.pip_tab_id() == Some(id); // its page is zoomed out on purpose
         if let Some(tab) = self.tab_mut(id) {
             tab.on_page_started(&url);
             tab.site_allowed.set(allowed);
-            tab.set_zoom(zoom);
+            if !in_pip {
+                tab.set_zoom(zoom);
+            }
             self.update_ui();
         }
     }

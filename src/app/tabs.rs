@@ -215,10 +215,15 @@ impl BrowserApp {
     }
 
     /// Shows tab `id` (creating its webview if it is not loaded) and hides the others.
-    fn activate(&mut self, id: usize) {
+    pub(super) fn activate(&mut self, id: usize) {
         let Some(idx) = self.tabs.iter().position(|t| t.id == id) else {
             return;
         };
+        // Opening a tab whose video is in the floating player takes the video back first.
+        if self.pip_tab_id() == Some(id) {
+            self.close_pip(false);
+        }
+        let prev = self.active_tab_id;
         if self.tabs[idx].webview.is_none() {
             let webview = self.create_tab_webview(idx);
             let tab = &mut self.tabs[idx];
@@ -229,6 +234,7 @@ impl BrowserApp {
 
         let content_rect = self.content_rect();
         let now = Instant::now();
+        let pip_tab = self.pip_tab_id();
         for tab in &mut self.tabs {
             if tab.id == id || tab.id == self.active_tab_id {
                 tab.last_active = now;
@@ -237,12 +243,22 @@ impl BrowserApp {
                 tab.set_bounds(content_rect);
                 tab.set_visible(true);
                 tab.focus();
-            } else {
+            } else if Some(tab.id) != pip_tab {
+                // (the floating player's webview lives in its own window)
                 tab.set_visible(false);
             }
         }
         self.active_tab_id = id;
         self.sync_window_title();
+
+        // Left a tab with sound playing: offer its video to the floating player.
+        if prev != id
+            && self.pip.is_none()
+            && self.storage.data.settings.auto_pip
+            && self.tabs.iter().any(|t| t.id == prev && t.playing_audio)
+        {
+            self.find_pip_video(prev, false);
+        }
     }
 
     fn remember_closed(&mut self, idx: usize) {
@@ -286,6 +302,9 @@ impl BrowserApp {
             return;
         }
 
+        if self.pip_tab_id() == Some(id) {
+            self.close_pip(false);
+        }
         self.remember_closed(idx);
         let was_active = self.active_tab_id == id;
         let removed = self.tabs.remove(idx);
@@ -513,9 +532,11 @@ impl BrowserApp {
             return;
         }
         let active = self.active_tab_id;
+        let pip_tab = self.pip_tab_id();
         let mut changed = false;
         for tab in &mut self.tabs {
             if tab.id != active
+                && Some(tab.id) != pip_tab
                 && tab.webview.is_some()
                 && !tab.playing_audio
                 && tab.last_active.elapsed() >= SLEEP_AFTER

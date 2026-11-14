@@ -41,6 +41,10 @@ impl BrowserApp {
 
     /// Remembers the zoom level per site (WebView2 zooms per tab, not per site).
     pub(super) fn on_zoom_changed(&mut self, id: usize, factor: f64) {
+        // The floating video player zooms its page out on purpose: not the user's choice.
+        if self.pip_tab_id() == Some(id) {
+            return;
+        }
         let Some(tab) = self.tab_mut(id) else { return };
         tab.zoom = factor;
         if let Some(site) = site_key(&tab.url) {
@@ -90,6 +94,17 @@ impl BrowserApp {
                     tr("Mykistä välilehti", "Mute tab")
                 },
             ),
+            MenuEntry::Item {
+                id: 9,
+                label: if self.pip_tab_id() == Some(id) {
+                    tr("Palauta video välilehteen\tCtrl+Shift+P", "Return video to tab\tCtrl+Shift+P")
+                } else {
+                    tr("Avaa video ikkunaan\tCtrl+Shift+P", "Pop out video\tCtrl+Shift+P")
+                }
+                .into(),
+                checked: false,
+                enabled: tab.webview.is_some(),
+            },
             MenuEntry::Separator,
             MenuEntry::item(5, tr("Sulje välilehti\tCtrl+W", "Close tab\tCtrl+W")),
             MenuEntry::Item {
@@ -125,6 +140,7 @@ impl BrowserApp {
             Some(8) => {
                 let _ = self.proxy.send_event(AppEvent::IpcReopenTab);
             }
+            Some(9) => self.toggle_pip(id),
             _ => {}
         }
     }

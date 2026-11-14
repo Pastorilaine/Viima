@@ -5,6 +5,13 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.7.0] - 2026-11-14
+
+### 🌟 Uutta (Added)
+- **Leijuva videosoitin (kuva kuvassa)**: kun vaihdat pois välilehdeltä, jossa video soi, video jatkuu pienessä reunattomassa ikkunassa, joka pysyy muiden päällä. Soittimessa on toisto/tauko, ±10 s, hakupalkki, äänenvoimakkuus, takaisin välilehteen ja sulje. Ikkunaa voi vetää kuvasta ja koon muutos pitää kuvasuhteen (leveys ja korkeus skaalautuvat yhdessä). Käsin: Ctrl+Shift+P tai välilehden valikko. Asetukset → Yleiset → "Video irtoaa ikkunaan" kytkee automaattisen avauksen pois. Sivu pienennetään ikkunaan sopivaksi, joten sivusto säilyttää työpöytäasettelunsa, ja ikkuna seuraa videon kuvasuhdetta myös seuraavan videon tai mainoksen vaihtuessa. Soitin löytää vain sivun oman `<video>`-elementin, ei toisen sivuston kehykseen (iframe) upotettua videota.
+
+---
+
 ## [0.6.0] - 2026-11-14
 
 ### 🌟 Uutta (Added)
