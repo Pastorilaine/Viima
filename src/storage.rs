@@ -220,7 +220,15 @@ pub struct BrowserData {
     /// Per-site page zoom (site_key -> factor), only non-100% values.
     pub site_zoom: HashMap<String, f64>,
     pub downloads: Vec<DownloadItem>,
+    /// Preferences of internal pages (start page layout, wallpaper). Kept here, not only in
+    /// the web profile, so they follow the browser data and survive a profile reset.
+    pub page_prefs: std::collections::BTreeMap<String, String>,
 }
+
+/// Internal pages may only store keys with this prefix, with bounded size.
+pub const PAGE_PREF_PREFIX: &str = "viima_newtab_";
+const PAGE_PREF_MAX_VALUE: usize = 64 * 1024;
+const PAGE_PREF_MAX_KEYS: usize = 16;
 
 impl Default for BrowserData {
     fn default() -> Self {
@@ -250,8 +258,20 @@ impl Default for BrowserData {
             session: Session::default(),
             site_zoom: HashMap::new(),
             downloads: Vec::new(),
+            page_prefs: Default::default(),
         }
     }
+}
+
+/// `VIIMA_PROFILE_DIR=<folder>` keeps all data (settings, history, web profile, extensions) in
+/// that folder instead of AppData: for testing and portable use. Absolute paths only.
+pub fn has_profile_override() -> bool {
+    profile_override().is_some()
+}
+
+fn profile_override() -> Option<PathBuf> {
+    let dir = PathBuf::from(std::env::var_os("VIIMA_PROFILE_DIR")?);
+    dir.is_absolute().then_some(dir)
 }
 
 fn project_dirs() -> Option<ProjectDirs> {
@@ -260,6 +280,9 @@ fn project_dirs() -> Option<ProjectDirs> {
 
 /// WebView2 profile folder (cookies, cache, logins) under %LOCALAPPDATA%.
 pub fn webview_data_dir() -> Option<PathBuf> {
+    if let Some(root) = profile_override() {
+        return Some(root.join("WebView2"));
+    }
     project_dirs().map(|d| {
         let new_dir = d.data_local_dir().join("WebView2");
         if !new_dir.exists()
@@ -292,6 +315,11 @@ pub fn private_data_dir() -> PathBuf {
 
 /// Folder for app data files (browser_data.json, history.db, filter lists).
 pub fn config_dir() -> PathBuf {
+    if let Some(root) = profile_override() {
+        let dir = root.join("config");
+        let _ = fs::create_dir_all(&dir);
+        return dir;
+    }
     match project_dirs() {
         Some(d) => {
             let dir = d.config_dir().to_path_buf();
@@ -698,6 +726,19 @@ impl StorageManager {
             .any(|s| s == site)
     }
 
+    /// Stores one internal-page preference. Returns false when the key/value is refused.
+    pub fn set_page_pref(&mut self, key: &str, value: &str) -> bool {
+        let ok = key.starts_with(PAGE_PREF_PREFIX)
+            && key.len() <= 64
+            && value.len() <= PAGE_PREF_MAX_VALUE
+            && (self.data.page_prefs.contains_key(key) || self.data.page_prefs.len() < PAGE_PREF_MAX_KEYS);
+        if ok && self.data.page_prefs.get(key).map(String::as_str) != Some(value) {
+            self.data.page_prefs.insert(key.to_string(), value.to_string());
+            self.save();
+        }
+        ok
+    }
+
     pub fn set_site_zoom(&mut self, site: &str, factor: f64) {
         let factor = (factor * 100.0).round() / 100.0;
         let changed = if (factor - 1.0).abs() < 0.001 {
@@ -888,6 +929,20 @@ mod tests {
         assert_eq!(storage.site_zoom("yle.fi"), 1.25);
         storage.set_site_zoom("yle.fi", 1.0);
         assert!(storage.data.site_zoom.is_empty());
+    }
+
+    #[test]
+    fn test_page_prefs_are_bounded() {
+        let mut s = StorageManager::in_memory();
+        assert!(s.set_page_pref("viima_newtab_layout", "{}"));
+        assert!(!s.set_page_pref("other_key", "x"));
+        assert!(!s.set_page_pref("viima_newtab_big", &"x".repeat(PAGE_PREF_MAX_VALUE + 1)));
+        for i in 0..PAGE_PREF_MAX_KEYS {
+            s.set_page_pref(&format!("viima_newtab_{i}"), "1");
+        }
+        assert!(!s.set_page_pref("viima_newtab_overflow", "1"));
+        assert!(s.set_page_pref("viima_newtab_layout", "[]"), "existing keys stay writable");
+        assert_eq!(s.data.page_prefs.len(), PAGE_PREF_MAX_KEYS);
     }
 
     #[test]

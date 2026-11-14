@@ -133,6 +133,27 @@ impl BrowserApp {
         self.push_widget(&kind, &key, result);
     }
 
+    pub(super) fn set_page_pref(&mut self, key: &str, value: &str) {
+        if !self.private {
+            self.storage.set_page_pref(key, value);
+        }
+    }
+
+    /// Sends the saved start-page preferences to every open start page (they merge them in).
+    pub(super) fn push_page_prefs(&self) {
+        let Ok(json) = serde_json::to_string(&self.storage.data.page_prefs) else {
+            return;
+        };
+        let script = format!(
+            "if (location.origin === 'http://browser.newtab' && window.onPagePrefs) {{ window.onPagePrefs({json}); }}"
+        );
+        for tab in &self.tabs {
+            if InternalPage::from_url(&tab.url) == Some(InternalPage::NewTab) {
+                tab.run_script(&script);
+            }
+        }
+    }
+
     /// Answer goes to every open start page; each one only reacts to its own request key.
     fn push_widget(&self, kind: &str, key: &str, result: Result<String, String>) {
         let (ok, payload) = match result {

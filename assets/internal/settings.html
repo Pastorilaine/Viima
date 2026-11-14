@@ -6,633 +6,593 @@
     <title data-i18n="set.page_title">Asetukset — Viima</title>
     <link rel="icon" type="image/png" href="viima-logo.png">
     <style>
+        /* Settings: a left rail of sections, rows on hairlines, no cards. New settings go into
+           a panel as a .row; a new section is one nav button + one <section class="panel">. */
         :root {
-            --bg-page: #0f1117;
-            --bg-card: #181b24;
-            --bg-card-hover: #1f232e;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --accent: #38bdf8;
-            --border-card: rgba(255, 255, 255, 0.08);
-            --danger: #ef4444;
-            --success: #10b981;
-            --bg-control: #252934;
-            --bg-control-hover: #333846;
-            --slider-off: #334155;
-            --row-border: rgba(255, 255, 255, 0.05);
+            --page: #0e0f12;
+            --rail: #121419;
+            --text: #f2f0ea;
+            --dim: #a8acb3;
+            --rule: rgba(255, 255, 255, 0.12);
+            --control: #1b1e25;
+            --control-hover: #262a33;
+            --accent: #7dd3fc;
+            --on-accent: #06222b;
+            --danger: #ff7a7a;
+            --ok: #4ade9b;
+            --off: #3a3f4a;
+            --sans: "Bahnschrift", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+            --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+            --ease: cubic-bezier(0.22, 1, 0.36, 1);
             color-scheme: dark;
         }
 
         :root[data-theme="light"] {
-            --bg-page: #eef1f6;
-            --bg-card: #ffffff;
-            --bg-card-hover: #f4f7fb;
-            --text-main: #0f172a;
-            --text-dim: #52607a;
-            --accent: #0284c7;
-            --border-card: rgba(15, 23, 42, 0.1);
-            --danger: #dc2626;
-            --success: #059669;
-            --bg-control: #eceff3;
-            --bg-control-hover: #dfe3e9;
-            --slider-off: #cbd5e1;
-            --row-border: rgba(15, 23, 42, 0.07);
+            --page: #f4f3ee;
+            --rail: #ebeae4;
+            --text: #17181b;
+            --dim: #585a60;
+            --rule: rgba(0, 0, 0, 0.14);
+            --control: #ffffff;
+            --control-hover: #e6e5df;
+            --accent: #0a6c8e;
+            --on-accent: #ffffff;
+            --danger: #c73e3e;
+            --ok: #0e8a5a;
+            --off: #b9bcc2;
             color-scheme: light;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background-color: var(--bg-page);
-            color: var(--text-main);
-            padding: 40px 20px;
-            display: flex;
-            justify-content: center;
+            background: var(--page);
+            color: var(--text);
+            font: 400 14px/1.45 var(--sans);
+            min-height: 100vh;
         }
 
-        .container {
-            width: 100%;
-            max-width: 760px;
-        }
+        button, input, select { font: inherit; color: inherit; }
+        button { cursor: pointer; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
-            border-bottom: 1px solid var(--border-card);
-            padding-bottom: 18px;
-        }
+        .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
 
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-card);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--accent);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .setting-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--row-border);
-        }
-
-        .setting-row:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .setting-info {
+        /* ---- left rail ---- */
+        .rail {
+            position: sticky;
+            top: 0;
+            align-self: start;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 28px;
+            padding: 32px 16px 24px;
+            background: var(--rail);
+            border-right: 1px solid var(--rule);
         }
 
-        .setting-label {
-            font-size: 14px;
-            font-weight: 500;
-        }
+        .brand { display: flex; align-items: center; gap: 12px; padding: 0 12px; }
+        .brand img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+        .brand b { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 
-        .setting-desc {
-            font-size: 12px;
-            color: var(--text-dim);
-        }
-
-        select.custom-select {
-            background: var(--bg-control);
-            color: var(--text-main);
-            border: 1px solid var(--border-card);
-            border-radius: 6px;
-            padding: 8px 14px;
-            font-size: 13px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        select.custom-select:focus {
-            border-color: var(--accent);
-        }
-
-        /* Toggle switch */
-        .switch {
+        .nav { position: relative; display: flex; flex-direction: column; gap: 2px; }
+        .nav-item {
             position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
+            z-index: 1;
+            display: block;
+            padding: 9px 12px;
+            border-radius: 6px;
+            color: var(--dim);
+            text-decoration: none;
+            font-size: 15px;
+            transition: color 0.15s, background-color 0.15s;
         }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
+        .nav-item:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+        .nav-item[aria-current="page"] { color: var(--text); }
+        /* One marker that slides to the active item */
+        .nav-mark {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
             height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--slider-off);
-            transition: .2s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .2s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--accent);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-
-        .btn-action {
-            background: var(--bg-control);
-            color: var(--text-main);
-            border: 1px solid var(--border-card);
-            padding: 8px 16px;
             border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.15s ease;
+            background: color-mix(in srgb, var(--accent) 16%, transparent);
+            box-shadow: inset 3px 0 0 var(--accent);
+            transition: transform 0.28s var(--ease), height 0.28s var(--ease);
+            pointer-events: none;
         }
 
-        .btn-action:hover {
-            background: var(--bg-control-hover);
-        }
+        .rail-foot { margin-top: auto; padding: 0 12px; color: var(--dim); font-size: 12px; }
 
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-
-        .info-pill {
-            display: inline-block;
-            background: rgba(56, 189, 248, 0.12);
-            color: var(--accent);
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #0b1120;
-            border-color: var(--accent);
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent);
-            filter: brightness(1.08);
-        }
-
-        .btn-action:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        .update-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-pill {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-            background: var(--bg-control);
-            color: var(--text-dim);
-        }
-
-        .status-pill.is-ok {
-            background: rgba(16, 185, 129, 0.14);
-            color: #10b981;
-        }
-
-        .status-pill.is-available {
-            background: rgba(59, 130, 246, 0.16);
-            color: #60a5fa;
-        }
-
-        .status-pill.is-error {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-        }
-
-        .update-url-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            max-width: 440px;
-        }
-
-        .custom-input {
-            flex: 1;
-            background: var(--bg-control);
-            color: var(--text-main);
-            border: 1px solid var(--border-card);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12.5px;
-            outline: none;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        }
-
-        .custom-input:focus {
-            border-color: var(--accent);
-        }
-
-        .update-notes {
-            margin-top: 6px;
-            font-size: 12.5px;
-            color: var(--text-dim);
-            white-space: pre-line;
-            max-width: 520px;
-        }
-
-        .site-list {
-            margin-top: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            max-height: 320px;
-            overflow-y: auto;
-        }
-
-        .site-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 6px 10px;
-            border-radius: 6px;
-            background: var(--bg-control);
-            font-size: 13px;
-        }
-
-        .site-row span:first-child {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .site-row .count {
-            color: var(--text-dim);
-            font-size: 12px;
-            margin-left: auto;
-        }
-
-        .btn-small {
-            padding: 4px 10px;
-            font-size: 12px;
-        }
+        /* ---- content ---- */
+        main { padding: 40px clamp(20px, 5vw, 72px) 96px; min-width: 0; }
+        .content { max-width: 760px; }
 
         .private-note {
             display: none;
-            margin-bottom: 20px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            background: rgba(168, 85, 247, 0.14);
-            color: #c084fc;
+            margin-bottom: 24px;
+            padding-left: 12px;
+            border-left: 2px solid #a855f7;
+        }
+        html[data-private] .private-note { display: block; }
+
+        .panel[hidden] { display: none; }
+        .panel.enter { animation: panel-in 0.26s var(--ease); }
+        @keyframes panel-in { from { opacity: 0; transform: translateY(8px); } }
+
+        .panel > h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+        .panel > .lead { color: var(--dim); margin-bottom: 24px; max-width: 60ch; }
+        .group { margin: 32px 0 4px; font-size: 13px; color: var(--dim); font-weight: 600; }
+        .group:first-of-type { margin-top: 8px; }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px 24px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--rule);
+        }
+        .row-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 280px; }
+        .row-label { font-size: 15px; font-weight: 500; }
+        .row-desc { font-size: 13px; color: var(--dim); max-width: 62ch; }
+        .row-end { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .row.wide > .full { flex-basis: 100%; }
+
+        /* ---- controls ---- */
+        select.custom-select, .custom-input {
+            background: var(--control);
+            border: 1px solid var(--rule);
+            border-radius: 6px;
+            padding: 7px 12px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        select.custom-select:hover, .custom-input:hover { border-color: color-mix(in srgb, var(--text) 35%, transparent); }
+        select.custom-select:focus, .custom-input:focus { border-color: var(--accent); }
+        .custom-input { width: min(100%, 340px); font: 12.5px var(--mono); }
+
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+        .switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+        .slider {
+            position: absolute;
+            inset: 0;
+            background: var(--off);
+            border-radius: 12px;
+            transition: background-color 0.2s;
+        }
+        .slider::before {
+            content: "";
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.25s var(--ease);
+        }
+        .switch input:checked + .slider { background: var(--accent); }
+        .switch input:checked + .slider::before { transform: translateX(18px); }
+        .switch input:active + .slider::before { width: 22px; }
+        .switch input:checked:active + .slider::before { transform: translateX(14px); }
+        .switch input:focus-visible + .slider { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        .btn-action {
+            background: var(--control);
+            border: 1px solid var(--rule);
+            padding: 7px 14px;
+            border-radius: 6px;
+            transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+        }
+        .btn-action:hover { background: var(--control-hover); }
+        .btn-action:active { transform: scale(0.97); }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+        .btn-primary:hover { background: var(--accent); filter: brightness(1.1); }
+        .btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: transparent; }
+        .btn-danger:hover { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+        .btn-small { padding: 4px 10px; font-size: 12.5px; }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 11px;
+            font-size: 12px;
+            background: var(--control);
+            border: 1px solid var(--rule);
+            color: var(--dim);
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .pill.is-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+        .pill.is-available { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+        .pill.is-error { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
+
+        .update-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .update-notes { margin-top: 6px; font-size: 13px; color: var(--dim); white-space: pre-line; max-width: 62ch; }
+        .url-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        /* ---- site data + extensions lists ---- */
+        .list { display: flex; flex-direction: column; margin-top: 8px; max-height: 340px; overflow-y: auto; }
+        .list-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-top: 1px solid var(--rule);
+            animation: row-in 0.22s var(--ease) backwards;
+            animation-delay: calc(var(--i, 0) * 25ms);
+        }
+        @keyframes row-in { from { opacity: 0; transform: translateX(-6px); } }
+        .list-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .list-row .count { margin-left: auto; color: var(--dim); font-size: 12.5px; white-space: nowrap; }
+
+        .ext-list { display: flex; flex-direction: column; }
+        .ext {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--rule);
+            animation: row-in 0.25s var(--ease) backwards;
+            animation-delay: calc(var(--i, 0) * 40ms);
+            transition: opacity 0.2s;
+        }
+        .ext.off { opacity: 0.6; }
+        .ext-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .ext-name { font-size: 15px; font-weight: 500; }
+        .ext-name small { color: var(--dim); font: 12px var(--mono); margin-left: 8px; }
+        .ext-desc { font-size: 13px; color: var(--dim); }
+        .ext-empty { padding: 18px 0; color: var(--dim); }
+        .notice {
+            margin: 12px 0 0;
+            padding: 10px 12px;
+            border-left: 2px solid var(--accent);
+            background: color-mix(in srgb, var(--accent) 10%, transparent);
+            animation: panel-in 0.25s var(--ease);
+        }
+        .notice[hidden] { display: none; }
+        code { overflow-wrap: anywhere; font: 12.5px var(--mono); background: var(--control); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+
+        .about-head { display: flex; align-items: center; gap: 16px; padding: 8px 0 20px; border-bottom: 1px solid var(--rule); }
+        .about-head img { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; }
+        .about-head b { display: block; font-size: 22px; font-weight: 600; }
+        .about-head span { color: var(--dim); }
+        .finland { display: flex; align-items: center; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+        .flag { width: 28px; height: 18px; flex-shrink: 0; border: 1px solid var(--rule); }
+
+        /* ---- saved indicator ---- */
+        .saved {
+            position: fixed;
+            right: 24px;
+            bottom: 20px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: var(--control);
+            border: 1px solid var(--rule);
+            color: var(--ok);
             font-size: 13px;
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.25s var(--ease);
+        }
+        .saved.show { opacity: 1; transform: none; }
+
+        @media (max-width: 760px) {
+            .shell { grid-template-columns: 1fr; }
+            .rail { position: static; height: auto; flex-direction: row; align-items: center; gap: 12px; padding: 12px 16px 0; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+            .brand { padding: 0; }
+            .brand b, .rail-foot { display: none; }
+            .nav { flex-direction: row; gap: 0; }
+            .nav-item { white-space: nowrap; border-radius: 0; padding: 12px; }
+            .nav-mark { display: none; }
+            .nav-item[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--accent); }
+            main { padding: 24px 16px 80px; }
         }
 
-        html[data-private] .private-note {
-            display: block;
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <h1 data-i18n="set.title">Selaimen asetukset</h1>
-        </div>
+    <div class="shell">
+        <aside class="rail">
+            <div class="brand">
+                <img src="viima-logo.png" alt="">
+                <b data-i18n="set.title">Asetukset</b>
+            </div>
+            <nav class="nav" id="nav" aria-label="Asetukset">
+                <span class="nav-mark" id="navMark" aria-hidden="true"></span>
+                <a class="nav-item" href="#general" data-panel="general" data-i18n="set.nav_general">Yleiset</a>
+                <a class="nav-item" href="#appearance" data-panel="appearance" data-i18n="set.nav_appearance">Ulkoasu</a>
+                <a class="nav-item" href="#privacy" data-panel="privacy" data-i18n="set.nav_privacy">Tietosuoja ja turvallisuus</a>
+                <a class="nav-item" href="#extensions" data-panel="extensions" data-i18n="set.nav_extensions">Laajennukset</a>
+                <a class="nav-item" href="#updates" data-panel="updates" data-i18n="set.nav_updates">Päivitykset</a>
+                <a class="nav-item" href="#about" data-panel="about" data-i18n="set.nav_about">Tietoja</a>
+            </nav>
+            <div class="rail-foot" data-i18n="set.autosave">Muutokset tallentuvat automaattisesti.</div>
+        </aside>
 
-        <div class="private-note" data-i18n="nt.private">Olet yksityisessä ikkunassa. Historia, evästeet ja sivustotiedot poistetaan, kun suljet sen.</div>
+        <main>
+            <div class="content">
+                <div class="private-note" data-i18n="nt.private">Olet yksityisessä ikkunassa. Historia, evästeet ja sivustotiedot poistetaan, kun suljet sen.</div>
 
-        <!-- Hakuasetukset -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span data-i18n="set.search">Haku & Osoiterivi</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.engine">Oletushakukone</span>
-                    <span class="setting-desc" data-i18n="set.engine_desc">Käytetään osoiterivin ja aloitussivun hakukyselyissä</span>
-                </div>
-                <select class="custom-select" id="selectSearchEngine">
-                    <option value="google" selected>Google</option>
-                    <option value="duckduckgo">DuckDuckGo</option>
-                    <option value="bing">Microsoft Bing</option>
-                    <option value="wikipedia">Wikipedia</option>
-                </select>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.bangs">Pikahaut (Bang-komennot)</span>
-                    <span class="setting-desc" data-i18n="set.bangs_desc">Voit hakea suoraan esim: !g rust, !yt video, !w suomi, !gh linux</span>
-                </div>
-                <span class="info-pill" data-i18n="set.always_on">Aina käytössä</span>
-            </div>
-        </div>
+                <!-- Yleiset -->
+                <section class="panel" id="general" hidden>
+                    <h1 data-i18n="set.nav_general">Yleiset</h1>
+                    <p class="lead" data-i18n="set.general_lead">Haku, kieli ja selaimen perustoiminnot.</p>
 
-        <!-- Ulkoasu -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-                <span data-i18n="set.appearance">Ulkoasu</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.dark">Tumma teema</span>
-                    <span class="setting-desc" data-i18n="set.dark_desc">Vaihda selaimen ja sisäsivujen teema tumman ja vaalean välillä</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="toggleTheme" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.language">Kieli / Language</span>
-                    <span class="setting-desc" data-i18n="set.language_desc">Selaimen käyttöliittymän kieli</span>
-                </div>
-                <select class="custom-select" id="selectLanguage">
-                    <option value="fi">Suomi</option>
-                    <option value="en">English</option>
-                </select>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.bar">Kirjanmerkkipalkki</span>
-                    <span class="setting-desc" data-i18n="set.bar_desc">Näytä kirjanmerkit osoiterivin alla (Ctrl+Shift+B)</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" data-setting="show_bookmarks_bar">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-
-        <!-- Turvallisuus ja yksityisyys -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span data-i18n="set.security">Turvallisuus & Yksityisyys</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.adblock">Mainosten ja seurannan esto</span>
-                    <span class="setting-desc" data-i18n="set.adblock_desc">Estää tunnetut mainosverkot, analytiikkaseuraimet ja ponnahdusikkunat</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="toggleAdblock" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.lists">Suodatinlistat (EasyList, EasyPrivacy, Peter Lowe)</span>
-                    <span class="setting-desc" data-i18n="set.lists_desc">Lataa yhteisön estolistat taustalla kerran viikossa</span>
-                    <span class="setting-desc" id="listsStatus"></span>
-                </div>
-                <div class="update-controls">
-                    <button class="btn-action btn-small" id="btnUpdateLists" data-i18n="set.lists_update">Päivitä nyt</button>
-                    <label class="switch">
-                        <input type="checkbox" data-setting="adblock_lists">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.cookies">Piilota evästeilmoitukset</span>
-                    <span class="setting-desc" data-i18n="set.cookies_desc">Piilottaa suostumusikkunat. Mitään ei hyväksytä puolestasi.</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" data-setting="hide_cookie_banners">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.https">HTTPS-tila</span>
-                    <span class="setting-desc" data-i18n="set.https_desc">Pakottaa salatun yhteyden ja varoittaa ennen salaamattoman sivun avaamista</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" data-setting="https_only">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row" style="flex-wrap: wrap;">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.site_data">Evästeet ja sivustotiedot</span>
-                    <span class="setting-desc" data-i18n="set.site_data_desc">Näe, mitkä sivustot tallentavat evästeitä, ja poista yksittäisen sivuston tiedot kirjautumatta ulos muualta</span>
-                </div>
-                <button class="btn-action" id="btnSiteData" data-i18n="set.site_data_show">Näytä sivustot</button>
-                <div class="site-list" id="siteList" style="width: 100%;" hidden></div>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.private">Uusi yksityinen ikkuna</span>
-                    <span class="setting-desc" data-i18n="set.private_desc">Selaa tallentamatta historiaa, evästeitä tai sivustotietoja (Ctrl+Shift+N)</span>
-                </div>
-                <button class="btn-action" id="btnPrivate" data-i18n="set.private_btn">Avaa yksityinen ikkuna</button>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.clear_history">Tyhjennä selaushistoria</span>
-                    <span class="setting-desc" data-i18n="set.clear_history_desc">Poistaa kaikki paikallisesti tallennetut selaustiedot</span>
-                </div>
-                <button class="btn-action btn-danger" id="btnClearHistory" data-i18n="set.clear_history_btn">Tyhjennä historia</button>
-            </div>
-        </div>
-
-        <!-- Järjestelmä -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-                <span data-i18n="set.system">Järjestelmä</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.default">Oletusselain</span>
-                    <span class="setting-desc" data-i18n="set.default_desc">Avaa muiden sovellusten linkit Viimassa. Avaa Windowsin Oletussovellukset-asetukset.</span>
-                </div>
-                <button class="btn-action btn-primary" id="btnDefault" data-i18n="set.default_btn">Aseta Viima oletusselaimeksi</button>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.sleeping">Lepotilavälilehdet</span>
-                    <span class="setting-desc" data-i18n="set.sleeping_desc">Purkaa yli 30 minuuttia taustalla olleet välilehdet muistista</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" data-setting="sleeping_tabs">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.devtools">Kehittäjätyökalut</span>
-                    <span class="setting-desc" data-i18n="set.devtools_desc">F12, Ctrl+Shift+I ja sivun valikon "Tarkista elementti"</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" data-setting="devtools_enabled">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-
-        <!-- Päivitykset -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-                <span data-i18n="set.updates">Päivitykset</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" id="updateStatusLabel">Sovelluksen päivitystila (v{{VERSION}})</span>
-                    <span class="setting-desc" id="updateStatusDesc">Tarkista saatavilla olevat päivitykset GitHub-julkaisuista.</span>
-                    <div class="update-notes" id="updateNotes" hidden></div>
-                </div>
-                <div class="update-controls">
-                    <span class="status-pill" id="updateStatusPill">Valmis</span>
-                    <button class="btn-action btn-primary" id="btnUpdateAction">Tarkista päivitykset</button>
-                </div>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.auto_update">Automaattiset päivitykset</span>
-                    <span class="setting-desc" data-i18n="set.auto_update_desc">Lataa uudet versiot taustalla käynnistyksen yhteydessä (asennettu versio).</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="toggleAutoUpdate" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.update_url">Päivityslähde (HTTPS URL)</span>
-                    <span class="setting-desc" data-i18n="set.update_url_desc">Osoite latest.json-tiedostoon tai GitHub Releases API:in</span>
-                </div>
-                <div class="update-url-group">
-                    <input type="url" class="custom-input" id="inputUpdateUrl" placeholder="https://github.com/.../latest.json">
-                    <button class="btn-action" id="btnSaveUpdateUrl" data-i18n="set.save">Tallenna</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tietoja selaimesta -->
-        <div class="section">
-            <div class="section-title">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <span data-i18n="set.about">Tietoja sovelluksesta</span>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info" style="flex-direction: row; align-items: center; gap: 12px;">
-                    <img src="viima-logo.png" alt="Viima" style="width: 36px; height: 36px; border-radius: 9px; object-fit: cover;">
-                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                        <span class="setting-label">Viima</span>
-                        <span class="setting-desc">v{{VERSION}} • IT-Veljekset Group</span>
+                    <h2 class="group" data-i18n="set.search">Haku ja osoiterivi</h2>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.engine">Oletushakukone</span>
+                            <span class="row-desc" data-i18n="set.engine_desc">Käytetään osoiterivin ja aloitussivun hakukyselyissä</span>
+                        </div>
+                        <select class="custom-select" id="selectSearchEngine">
+                            <option value="google" selected>Google</option>
+                            <option value="duckduckgo">DuckDuckGo</option>
+                            <option value="bing">Microsoft Bing</option>
+                            <option value="wikipedia">Wikipedia</option>
+                        </select>
                     </div>
-                </div>
-                <span class="info-pill">Rust 2024 + WebView2</span>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.bangs">Pikahaut (Bang-komennot)</span>
+                            <span class="row-desc" data-i18n="set.bangs_desc">Voit hakea suoraan esim: !g rust, !yt video, !w suomi, !gh linux</span>
+                        </div>
+                        <span class="pill" data-i18n="set.always_on">Aina käytössä</span>
+                    </div>
+
+                    <h2 class="group" data-i18n="set.system">Järjestelmä</h2>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.language">Kieli / Language</span>
+                            <span class="row-desc" data-i18n="set.language_desc">Selaimen käyttöliittymän kieli</span>
+                        </div>
+                        <select class="custom-select" id="selectLanguage">
+                            <option value="fi">Suomi</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.default">Oletusselain</span>
+                            <span class="row-desc" data-i18n="set.default_desc">Avaa muiden sovellusten linkit Viimassa. Avaa Windowsin Oletussovellukset-asetukset.</span>
+                        </div>
+                        <button class="btn-action btn-primary" id="btnDefault" data-i18n="set.default_btn">Aseta Viima oletusselaimeksi</button>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.sleeping">Lepotilavälilehdet</span>
+                            <span class="row-desc" data-i18n="set.sleeping_desc">Purkaa yli 30 minuuttia taustalla olleet välilehdet muistista</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" data-setting="sleeping_tabs"><span class="slider"></span></label>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.devtools">Kehittäjätyökalut</span>
+                            <span class="row-desc" data-i18n="set.devtools_desc">F12, Ctrl+Shift+I ja sivun valikon "Tarkista elementti"</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" data-setting="devtools_enabled"><span class="slider"></span></label>
+                    </div>
+                </section>
+
+                <!-- Ulkoasu -->
+                <section class="panel" id="appearance" hidden>
+                    <h1 data-i18n="set.nav_appearance">Ulkoasu</h1>
+                    <p class="lead" data-i18n="set.appearance_lead">Teema, kirjanmerkkipalkki ja aloitussivu.</p>
+
+                    <h2 class="group" data-i18n="set.group_browser">Selain</h2>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.dark">Tumma teema</span>
+                            <span class="row-desc" data-i18n="set.dark_desc">Vaihda selaimen ja sisäsivujen teema tumman ja vaalean välillä</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="toggleTheme" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.bar">Kirjanmerkkipalkki</span>
+                            <span class="row-desc" data-i18n="set.bar_desc">Näytä kirjanmerkit osoiterivin alla (Ctrl+Shift+B)</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" data-setting="show_bookmarks_bar"><span class="slider"></span></label>
+                    </div>
+
+                    <h2 class="group" data-i18n="set.group_start">Aloitussivu</h2>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.start">Muokkaa aloitussivua</span>
+                            <span class="row-desc" data-i18n="set.start_desc">Kello, sää, pörssikurssit, linkit ja taustakuva muokataan suoraan aloitussivulla Muokkaa-painikkeella. Valinnat tallentuvat.</span>
+                        </div>
+                        <button class="btn-action" id="btnStart" data-i18n="set.start_btn">Avaa aloitussivu</button>
+                    </div>
+                </section>
+
+                <!-- Tietosuoja ja turvallisuus -->
+                <section class="panel" id="privacy" hidden>
+                    <h1 data-i18n="set.nav_privacy">Tietosuoja ja turvallisuus</h1>
+                    <p class="lead" data-i18n="set.privacy_lead">Mitä Viima estää ja mitä se säilyttää laitteellasi.</p>
+
+                    <h2 class="group" data-i18n="set.group_blocking">Estot</h2>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.adblock">Mainosten ja seurannan esto</span>
+                            <span class="row-desc" data-i18n="set.adblock_desc">Estää tunnetut mainosverkot, analytiikkaseuraimet ja ponnahdusikkunat</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="toggleAdblock" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.lists">Suodatinlistat (EasyList, EasyPrivacy, Peter Lowe)</span>
+                            <span class="row-desc" data-i18n="set.lists_desc">Lataa yhteisön estolistat taustalla kerran viikossa</span>
+                            <span class="row-desc" id="listsStatus"></span>
+                        </div>
+                        <div class="row-end">
+                            <button class="btn-action btn-small" id="btnUpdateLists" data-i18n="set.lists_update">Päivitä nyt</button>
+                            <label class="switch"><input type="checkbox" data-setting="adblock_lists"><span class="slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.cookies">Piilota evästeilmoitukset</span>
+                            <span class="row-desc" data-i18n="set.cookies_desc">Piilottaa suostumusikkunat. Mitään ei hyväksytä puolestasi.</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" data-setting="hide_cookie_banners"><span class="slider"></span></label>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.https">HTTPS-tila</span>
+                            <span class="row-desc" data-i18n="set.https_desc">Pakottaa salatun yhteyden ja varoittaa ennen salaamattoman sivun avaamista</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" data-setting="https_only"><span class="slider"></span></label>
+                    </div>
+
+                    <h2 class="group" data-i18n="set.group_data">Tallennetut tiedot</h2>
+                    <div class="row wide">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.site_data">Evästeet ja sivustotiedot</span>
+                            <span class="row-desc" data-i18n="set.site_data_desc">Näe, mitkä sivustot tallentavat evästeitä, ja poista yksittäisen sivuston tiedot kirjautumatta ulos muualta</span>
+                        </div>
+                        <button class="btn-action" id="btnSiteData" data-i18n="set.site_data_show">Näytä sivustot</button>
+                        <div class="list full" id="siteList" hidden></div>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.private">Uusi yksityinen ikkuna</span>
+                            <span class="row-desc" data-i18n="set.private_desc">Selaa tallentamatta historiaa, evästeitä tai sivustotietoja (Ctrl+Shift+N)</span>
+                        </div>
+                        <button class="btn-action" id="btnPrivate" data-i18n="set.private_btn">Avaa yksityinen ikkuna</button>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.clear_history">Tyhjennä selaushistoria</span>
+                            <span class="row-desc" data-i18n="set.clear_history_desc">Poistaa kaikki paikallisesti tallennetut selaustiedot</span>
+                        </div>
+                        <button class="btn-action btn-danger" id="btnClearHistory" data-i18n="set.clear_history_btn">Tyhjennä historia</button>
+                    </div>
+                </section>
+
+                <!-- Laajennukset -->
+                <section class="panel" id="extensions" hidden>
+                    <h1 data-i18n="set.nav_extensions">Laajennukset</h1>
+                    <p class="lead" data-i18n="set.ext_lead">Viima ajaa puretut Chromium-laajennukset (Manifest V3). Lisää laajennus kopioimalla sen kansio laajennuskansioon.</p>
+
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.ext_folder">Laajennuskansio</span>
+                            <span class="row-desc"><code id="extFolder">…</code></span>
+                        </div>
+                        <button class="btn-action" id="btnExtFolder" data-i18n="set.ext_open">Avaa kansio</button>
+                    </div>
+                    <div class="notice" id="extPrivate" hidden data-i18n="set.ext_private">Laajennukset eivät ole käytössä yksityisessä ikkunassa.</div>
+                    <div class="notice" id="extRestart" hidden data-i18n="set.ext_restart">Käynnistä Viima uudelleen, jotta muutokset tulevat voimaan.</div>
+                    <div class="ext-list" id="extList"></div>
+                    <p class="row-desc" style="margin-top: 20px;" data-i18n="set.ext_trust">Asenna vain laajennuksia, joihin luotat: ne voivat lukea sivuja, joilla ne toimivat.</p>
+                </section>
+
+                <!-- Päivitykset -->
+                <section class="panel" id="updates" hidden>
+                    <h1 data-i18n="set.nav_updates">Päivitykset</h1>
+                    <p class="lead" data-i18n="set.updates_lead">Viima päivittyy allekirjoitetuilla paketeilla GitHub-julkaisuista.</p>
+
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" id="updateStatusLabel">Sovelluksen päivitystila (v{{VERSION}})</span>
+                            <span class="row-desc" id="updateStatusDesc">Tarkista saatavilla olevat päivitykset GitHub-julkaisuista.</span>
+                            <div class="update-notes" id="updateNotes" hidden></div>
+                        </div>
+                        <div class="update-controls">
+                            <span class="pill" id="updateStatusPill">Valmis</span>
+                            <button class="btn-action btn-primary" id="btnUpdateAction">Tarkista päivitykset</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.auto_update">Automaattiset päivitykset</span>
+                            <span class="row-desc" data-i18n="set.auto_update_desc">Lataa uudet versiot taustalla käynnistyksen yhteydessä (asennettu versio).</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="toggleAutoUpdate" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.update_url">Päivityslähde (HTTPS URL)</span>
+                            <span class="row-desc" data-i18n="set.update_url_desc">Osoite latest.json-tiedostoon tai GitHub Releases API:in</span>
+                        </div>
+                        <div class="url-group">
+                            <input type="url" class="custom-input" id="inputUpdateUrl" placeholder="https://github.com/.../latest.json">
+                            <button class="btn-action" id="btnSaveUpdateUrl" data-i18n="set.save">Tallenna</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tietoja -->
+                <section class="panel" id="about" hidden>
+                    <h1 data-i18n="set.about">Tietoja sovelluksesta</h1>
+                    <p class="lead" data-i18n="set.about_lead">Kevyt ja turvallinen selain, joka on rakennettu Rustilla.</p>
+
+                    <div class="about-head">
+                        <img src="viima-logo.png" alt="Viima">
+                        <div>
+                            <b>Viima</b>
+                            <span>v{{VERSION}} • IT-Veljekset Group</span>
+                        </div>
+                    </div>
+                    <div class="finland">
+                        <svg class="flag" viewBox="0 0 18 11" role="img" aria-label="Suomen lippu">
+                            <rect width="18" height="11" fill="#fff"/>
+                            <rect x="5" width="3" height="11" fill="#003580"/>
+                            <rect y="4" width="18" height="3" fill="#003580"/>
+                        </svg>
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.finland">Kehitetty Suomessa</span>
+                            <span class="row-desc" data-i18n="set.finland_desc">Viima on suunniteltu ja rakennettu Suomessa IT-Veljekset Groupin toimesta.</span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.tech">Tekniikka</span>
+                            <span class="row-desc">Rust 2024 • WebView2 • wry / tao</span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="row-info">
+                            <span class="row-label" data-i18n="set.shortcuts">Pikanäppäimet</span>
+                            <span class="row-desc" data-i18n="set.shortcuts_desc">Ctrl+T uusi välilehti • Ctrl+W sulje • Ctrl+Shift+T palauta • Ctrl+F etsi • Ctrl +/-/0 zoomaus • Ctrl+P tulosta • Ctrl+J lataukset • Ctrl+Shift+N yksityinen ikkuna • Ctrl+Shift+B kirjanmerkkipalkki • F12 kehittäjätyökalut</span>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label" data-i18n="set.shortcuts">Pikanäppäimet</span>
-                    <span class="setting-desc" data-i18n="set.shortcuts_desc">Ctrl+T uusi välilehti • Ctrl+W sulje • Ctrl+Shift+T palauta • Ctrl+F etsi • Ctrl +/-/0 zoomaus • Ctrl+P tulosta • Ctrl+J lataukset • Ctrl+Shift+N yksityinen ikkuna • Ctrl+Shift+B kirjanmerkkipalkki • F12 kehittäjätyökalut</span>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
+    <div class="saved" id="saved" role="status" aria-live="polite" data-i18n="set.saved">Tallennettu</div>
 
     <script src="i18n.js"></script>
     <script>
         const VERSION = '{{VERSION}}';
-        const selectSearchEngine = document.getElementById('selectSearchEngine');
-        const selectLanguage = document.getElementById('selectLanguage');
-        const toggleAdblock = document.getElementById('toggleAdblock');
-        const toggleTheme = document.getElementById('toggleTheme');
-        const btnClearHistory = document.getElementById('btnClearHistory');
-        const toggleAutoUpdate = document.getElementById('toggleAutoUpdate');
-        const inputUpdateUrl = document.getElementById('inputUpdateUrl');
-        const btnSaveUpdateUrl = document.getElementById('btnSaveUpdateUrl');
-        const btnUpdateAction = document.getElementById('btnUpdateAction');
-        const updateStatusPill = document.getElementById('updateStatusPill');
-        const updateStatusDesc = document.getElementById('updateStatusDesc');
-        const updateNotesEl = document.getElementById('updateNotes');
-        const listsStatusEl = document.getElementById('listsStatus');
-        const btnUpdateLists = document.getElementById('btnUpdateLists');
-        const siteListEl = document.getElementById('siteList');
+        const $ = (id) => document.getElementById(id);
+        const selectSearchEngine = $('selectSearchEngine');
+        const selectLanguage = $('selectLanguage');
+        const toggleAdblock = $('toggleAdblock');
+        const toggleTheme = $('toggleTheme');
+        const btnClearHistory = $('btnClearHistory');
+        const toggleAutoUpdate = $('toggleAutoUpdate');
+        const inputUpdateUrl = $('inputUpdateUrl');
+        const btnSaveUpdateUrl = $('btnSaveUpdateUrl');
+        const btnUpdateAction = $('btnUpdateAction');
+        const updateStatusPill = $('updateStatusPill');
+        const updateStatusDesc = $('updateStatusDesc');
+        const updateNotesEl = $('updateNotes');
+        const listsStatusEl = $('listsStatus');
+        const btnUpdateLists = $('btnUpdateLists');
+        const siteListEl = $('siteList');
         const settingToggles = document.querySelectorAll('input[data-setting]');
 
-        document.getElementById('updateStatusLabel').textContent = t('set.update_status', 'Sovelluksen päivitystila (v{v})', { v: VERSION });
+        $('updateStatusLabel').textContent = t('set.update_status', 'Sovelluksen päivitystila (v{v})', { v: VERSION });
 
         let latestUpdateState = 'idle';
         let siteDataRequested = false;
@@ -643,6 +603,60 @@
             }
         }
 
+        // ---------- navigation ----------
+        const navItems = [...document.querySelectorAll('.nav-item')];
+        const panels = new Map([...document.querySelectorAll('.panel')].map((p) => [p.id, p]));
+        const mark = $('navMark');
+        let current = null;
+
+        function moveMark() {
+            const active = navItems.find((a) => a.dataset.panel === current);
+            if (!active) return;
+            mark.style.height = active.offsetHeight + 'px';
+            mark.style.transform = `translateY(${active.offsetTop}px)`;
+        }
+
+        function show(id, animate = true) {
+            if (!panels.has(id)) id = 'general';
+            if (id === current) return;
+            const first = current === null;
+            current = id;
+            panels.forEach((p, key) => {
+                p.hidden = key !== id;
+                p.classList.remove('enter');
+            });
+            const panel = panels.get(id);
+            if (animate && !first) {
+                void panel.offsetWidth;
+                panel.classList.add('enter');
+            }
+            navItems.forEach((a) => {
+                if (a.dataset.panel === id) a.setAttribute('aria-current', 'page');
+                else a.removeAttribute('aria-current');
+            });
+            if (first) mark.style.transition = 'none';
+            moveMark();
+            if (first) requestAnimationFrame(() => { mark.style.transition = ''; });
+            if (id === 'extensions') notifyParent('list_extensions');
+            window.scrollTo(0, 0);
+        }
+
+        window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+        window.addEventListener('resize', moveMark);
+        document.fonts && document.fonts.ready.then(moveMark);
+        show(location.hash.slice(1), false);
+
+        // ---------- "saved" feedback ----------
+        let savedTimer = 0;
+        function flashSaved() {
+            const s = $('saved');
+            s.classList.add('show');
+            clearTimeout(savedTimer);
+            savedTimer = setTimeout(() => s.classList.remove('show'), 1400);
+        }
+        document.addEventListener('change', (e) => { if (e.target.closest('.row')) flashSaved(); });
+
+        // ---------- updates ----------
         function renderUpdateState(upd) {
             if (!upd) return;
             latestUpdateState = upd.state || 'idle';
@@ -721,20 +735,23 @@
             }
         }
 
+        // ---------- site data ----------
         function renderSiteData(list) {
             siteListEl.replaceChildren();
             siteListEl.hidden = false;
             if (!list.length) {
                 const e = document.createElement('div');
-                e.className = 'setting-desc';
+                e.className = 'row-desc';
                 e.textContent = t('set.site_data_empty', 'Ei tallennettuja evästeitä.');
                 siteListEl.appendChild(e);
                 return;
             }
-            for (const [site, count] of list) {
+            list.forEach(([site, count], i) => {
                 const row = document.createElement('div');
-                row.className = 'site-row';
+                row.className = 'list-row';
+                row.style.setProperty('--i', Math.min(i, 12));
                 const name = document.createElement('span');
+                name.className = 'name';
                 name.textContent = site;
                 const c = document.createElement('span');
                 c.className = 'count';
@@ -748,9 +765,70 @@
                 });
                 row.append(name, c, del);
                 siteListEl.appendChild(row);
-            }
+            });
         }
 
+        // ---------- extensions ----------
+        let extData = null;
+        function renderExtensions(data) {
+            extData = data;
+            $('extFolder').textContent = data.folder;
+            $('extPrivate').hidden = !data.private;
+            const listEl = $('extList');
+            listEl.replaceChildren();
+            if (!data.list.length) {
+                const e = document.createElement('div');
+                e.className = 'ext-empty';
+                e.textContent = t('set.ext_empty', 'Ei asennettuja laajennuksia.');
+                listEl.appendChild(e);
+            }
+            data.list.forEach((x, i) => {
+                const row = document.createElement('div');
+                row.className = 'ext' + (x.enabled ? '' : ' off');
+                row.style.setProperty('--i', Math.min(i, 10));
+                const info = document.createElement('div');
+                info.className = 'ext-info';
+                const name = document.createElement('span');
+                name.className = 'ext-name';
+                name.textContent = x.name;
+                if (x.version) {
+                    const v = document.createElement('small');
+                    v.textContent = 'v' + x.version;
+                    name.appendChild(v);
+                }
+                info.appendChild(name);
+                if (x.description) {
+                    const d = document.createElement('span');
+                    d.className = 'ext-desc';
+                    d.textContent = x.description;
+                    info.appendChild(d);
+                }
+                const sw = document.createElement('label');
+                sw.className = 'switch';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = x.enabled;
+                cb.setAttribute('aria-label', x.name);
+                cb.addEventListener('change', () => { notifyParent('set_extension', { id: x.id, enabled: cb.checked }); flashSaved(); });
+                sw.append(cb, Object.assign(document.createElement('span'), { className: 'slider' }));
+                const del = document.createElement('button');
+                del.className = 'btn-action btn-danger btn-small';
+                del.textContent = t('set.delete', 'Poista');
+                del.addEventListener('click', () => {
+                    if (confirm(t('set.ext_confirm_remove', 'Poistetaanko laajennus "{n}" ja sen tiedostot?', { n: x.name }))) {
+                        notifyParent('remove_extension', { id: x.id });
+                    }
+                });
+                row.append(info, sw, del);
+                listEl.appendChild(row);
+            });
+            const now = data.list.filter((x) => x.enabled).map((x) => x.id).sort().join('|');
+            const started = [...data.started].sort().join('|');
+            $('extRestart').hidden = data.private || now === started;
+        }
+        window.onExtensions = (data) => { if (data && Array.isArray(data.list)) renderExtensions(data); };
+
+        // ---------- browser state ----------
         window.onBrowserStateUpdate = state => {
             if (state.settings) {
                 const s = state.settings;
@@ -779,16 +857,18 @@
         toggleAdblock.addEventListener('change', () => notifyParent('toggle_adblock'));
         toggleAutoUpdate.addEventListener('change', () => notifyParent('toggle_auto_update'));
         btnUpdateLists.addEventListener('click', () => notifyParent('update_filter_lists'));
-        document.getElementById('btnSiteData').addEventListener('click', () => {
+        $('btnSiteData').addEventListener('click', () => {
             siteDataRequested = true;
             notifyParent('list_site_data');
         });
-        document.getElementById('btnPrivate').addEventListener('click', () => notifyParent('private_window'));
-        document.getElementById('btnDefault').addEventListener('click', () => notifyParent('set_default_browser'));
+        $('btnPrivate').addEventListener('click', () => notifyParent('private_window'));
+        $('btnDefault').addEventListener('click', () => notifyParent('set_default_browser'));
+        $('btnStart').addEventListener('click', () => notifyParent('new_tab', { url: 'browser://newtab' }));
+        $('btnExtFolder').addEventListener('click', () => notifyParent('open_extensions_folder'));
 
         btnSaveUpdateUrl.addEventListener('click', () => {
             const url = inputUpdateUrl.value.trim();
-            if (url) notifyParent('set_update_url', { url });
+            if (url) { notifyParent('set_update_url', { url }); flashSaved(); }
         });
 
         btnUpdateAction.addEventListener('click', () => {

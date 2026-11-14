@@ -86,6 +86,12 @@ pub enum AppEvent {
     IpcToggleAutoUpdate,
     IpcSetUpdateUrl(String),
     IpcRequestInitialState,
+    IpcSetPagePref(String, String),
+    IpcRequestPagePrefs,
+    IpcListExtensions,
+    IpcSetExtension(String, bool),
+    IpcRemoveExtension(String),
+    IpcOpenExtensionsFolder,
     IpcCloseActiveTab,
     IpcReopenTab,
     /// true = next tab, false = previous
@@ -300,6 +306,10 @@ pub struct BrowserApp {
     last_private_spawn: Option<Instant>,
     favicons: FaviconCache,
     widget_cache: remote::WidgetCache,
+    /// Folder handed to WebView2 at startup (None = no extensions this run).
+    extensions_path: Option<PathBuf>,
+    /// Extension ids that were loaded at startup; Settings compares against this.
+    extensions_started: Vec<String>,
 }
 
 impl BrowserApp {
@@ -339,9 +349,22 @@ impl BrowserApp {
             None => crate::storage::webview_data_dir(),
         });
 
+        // Extensions are a profile-wide setting: every webview must agree, so it is decided once.
+        // Private windows run without them (like Chrome's default for incognito).
+        let extensions_path = if private { None } else { crate::extensions::prepare() };
+
         let ui_proxy = proxy.clone();
         let ui_proxy_load = proxy.clone();
-        let ui_webview = WebViewBuilder::new_with_web_context(&mut web_context)
+        let ui_builder = WebViewBuilder::new_with_web_context(&mut web_context);
+        // WebView2 loads the extension folder when this webview is created; later webviews
+        // of the same profile only need the flag.
+        let ui_builder = match &extensions_path {
+            Some(path) => ui_builder
+                .with_browser_extensions_enabled(true)
+                .with_extensions_path(path),
+            None => ui_builder,
+        };
+        let ui_webview = ui_builder
             .with_theme(web_theme(dark))
             .with_additional_browser_args(BROWSER_ARGS)
             .with_incognito(private)
@@ -397,6 +420,11 @@ impl BrowserApp {
             last_private_spawn: None,
             favicons: FaviconCache::load(private),
             widget_cache: Default::default(),
+            extensions_started: extensions_path
+                .as_ref()
+                .map(|_| crate::extensions::list().into_iter().filter(|e| e.enabled).map(|e| e.id).collect())
+                .unwrap_or_default(),
+            extensions_path,
         };
         app.layout();
 
@@ -563,6 +591,20 @@ impl BrowserApp {
             }
             IpcSetUpdateUrl(url) => self.set_update_url(&url),
             IpcRequestInitialState => self.update_data(),
+            IpcSetPagePref(key, value) => self.set_page_pref(&key, &value),
+            IpcRequestPagePrefs => self.push_page_prefs(),
+            IpcListExtensions => self.push_extensions(),
+            IpcSetExtension(id, on) => {
+                crate::extensions::set_enabled(&id, on);
+                self.push_extensions();
+            }
+            IpcRemoveExtension(id) => {
+                crate::extensions::remove(&id);
+                self.push_extensions();
+            }
+            IpcOpenExtensionsFolder => crate::win_shell::open_path(
+                &crate::extensions::enabled_dir().to_string_lossy(),
+            ),
             IpcCloseActiveTab => self.close_tab(self.active_tab_id),
             IpcReopenTab => {
                 if let Some(entry) = self.closed_tabs.pop() {

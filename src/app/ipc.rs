@@ -134,6 +134,12 @@ pub fn parse(body: &str, trusted: bool, tab_id: Option<usize>) -> Option<AppEven
             s(&v, "key")?.chars().take(64).collect(),
             v.get("params").cloned().unwrap_or(Value::Null),
         ),
+        "list_extensions" => AppEvent::IpcListExtensions,
+        "set_extension" => AppEvent::IpcSetExtension(s(&v, "id")?, v.get("enabled")?.as_bool()?),
+        "remove_extension" => AppEvent::IpcRemoveExtension(s(&v, "id")?),
+        "open_extensions_folder" => AppEvent::IpcOpenExtensionsFolder,
+        "page_pref_set" => AppEvent::IpcSetPagePref(s(&v, "key")?, s(&v, "value")?),
+        "page_prefs_get" => AppEvent::IpcRequestPagePrefs,
         "request_initial_state" => AppEvent::IpcRequestInitialState,
         "autocomplete" => AppEvent::IpcAutocomplete(s(&v, "q")?),
         "find" => AppEvent::IpcFind,
@@ -192,6 +198,20 @@ mod tests {
         let widget = r#"{"action":"widget_fetch","kind":"quote","key":"k1","params":{"symbol":"AAPL"}}"#;
         assert!(parse(widget, false, Some(1)).is_none());
         assert!(matches!(parse(widget, true, None), Some(AppEvent::IpcWidgetFetch(..))));
+    }
+
+    #[test]
+    fn test_extension_and_pref_actions_are_trusted_only() {
+        for body in [
+            r#"{"action":"set_extension","id":"x","enabled":true}"#,
+            r#"{"action":"remove_extension","id":"x"}"#,
+            r#"{"action":"open_extensions_folder"}"#,
+            r#"{"action":"page_pref_set","key":"viima_newtab_layout","value":"{}"}"#,
+        ] {
+            assert!(parse(body, false, Some(1)).is_none(), "{body}");
+            assert!(parse(body, true, None).is_some(), "{body}");
+        }
+        assert!(parse(r#"{"action":"set_extension","id":"x"}"#, true, None).is_none());
     }
 
     #[test]

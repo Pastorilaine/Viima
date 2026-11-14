@@ -234,6 +234,16 @@
         @media (prefers-reduced-motion: no-preference) {
             .w { animation: rise 0.4s ease-out backwards; animation-delay: calc(var(--i, 0) * 60ms); }
             @keyframes rise { from { opacity: 0; } }
+            /* Answers to the user's actions: menus and option panels open, tiles respond. */
+            .menu.open, .w.open .opts { animation: pop 0.18s cubic-bezier(0.22, 1, 0.36, 1); transform-origin: 100% 100%; }
+            .w.open .opts { transform-origin: 0 0; }
+            @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(0.97); } }
+            .tile, .menu-opt, .btn, .tool, .dock .btn { transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.12s; }
+            .tile:active, .menu-opt:active, .btn:active, .tool:active { transform: scale(0.97); }
+            .tile-icon { transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+            .tile:hover .tile-icon { transform: scale(1.08); }
+            body.editing .w { transition: outline-color 0.2s, outline-offset 0.2s; animation: edit-in 0.2s ease-out; }
+            @keyframes edit-in { from { outline-offset: 2px; } }
         }
     </style>
 </head>
@@ -271,7 +281,7 @@
         const send = (action, payload = {}) => window.ipc && window.ipc.postMessage(JSON.stringify({ action, ...payload }));
         const EN = window.viimaLang === 'en';
         const LOCALE = EN ? 'en-GB' : 'fi-FI';
-        const footEl = el('div', 'foot', t('nt.footer', 'Viima v{v} • IT-Veljekset Group • Turvallinen, nopea ja kevyt', { v: '{{VERSION}}' }));
+        const footEl = el('div', 'foot', t('nt.footer', 'Viima v{v} • Kehitetty Suomessa • IT-Veljekset Group', { v: '{{VERSION}}' }));
 
         // ---------- small helpers ----------
         function el(tag, className, text) {
@@ -281,7 +291,11 @@
             return n;
         }
         const storageGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
-        const storageSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+        // localStorage is a fast local copy; the browser's own storage file is the durable one.
+        const storageSet = (k, v) => {
+            try { localStorage.setItem(k, v); } catch {}
+            if (k.startsWith('viima_newtab_')) send('page_pref_set', { key: k, value: String(v) });
+        };
         const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         const fmtTemp = (x) => `${Math.round(x)}°`.replace('-', '−');
         const timeHM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -874,6 +888,27 @@
             }
         };
         viimaFavicons.onUpdate(() => { if (!editing) render(); });
+
+        // Saved preferences from the browser's storage: fill in what the web profile lost,
+        // and upload what only exists locally (first run after the update).
+        window.onPagePrefs = function (prefs) {
+            if (!prefs || typeof prefs !== 'object') return;
+            let changed = false;
+            for (const k of ['viima_newtab_layout', 'viima_newtab_wallpaper']) {
+                const local = storageGet(k);
+                if (typeof prefs[k] === 'string') {
+                    if (prefs[k] !== local) { try { localStorage.setItem(k, prefs[k]); } catch {} changed = true; }
+                } else if (local !== null) {
+                    send('page_pref_set', { key: k, value: local });
+                }
+            }
+            if (changed && !editing) {
+                layout = loadLayout();
+                applyWallpaper(savedWallpaper());
+                render();
+            }
+        };
+        send('page_prefs_get');
 
         try { bookmarks = JSON.parse(storageGet('viima_cached_bookmarks')) || []; } catch { bookmarks = []; }
         applyWallpaper(savedWallpaper());

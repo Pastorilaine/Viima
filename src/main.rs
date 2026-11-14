@@ -2,6 +2,7 @@
 
 mod adblock;
 mod app;
+mod extensions;
 mod favicon;
 mod history_db;
 mod i18n;
@@ -76,7 +77,7 @@ fn main() {
 
     // A second normal launch (e.g. a link clicked in another app) goes to the open window.
     #[cfg(windows)]
-    if !private && win_shell::forward_to_running_instance(&urls.join("\n")) {
+    if !private && !storage::has_profile_override() && win_shell::forward_to_running_instance(&urls.join("\n")) {
         return;
     }
 
@@ -95,6 +96,8 @@ fn main() {
         .with_window_icon(window_icon)
         .with_window_classname(if private {
             "ViimaPrivateWindow"
+        } else if storage::has_profile_override() {
+            "ViimaProfileWindow" // a separate profile is a separate instance
         } else {
             win_shell::MAIN_WINDOW_CLASS
         })

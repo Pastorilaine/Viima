@@ -134,9 +134,28 @@ function newTabTitle() {
     return tr('ui.new_tab', 'Uusi välilehti');
 }
 
+// A closed tab fades out where it was, outside the list so the other tabs shift at once.
+function ghostTab(el) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const r = el.getBoundingClientRect();
+    el.remove();
+    if (reduced || !r.width) return;
+    el.classList.remove('active', 'dragging', 'drop-before', 'drop-after');
+    el.removeAttribute('data-new');
+    el.classList.add('tab-ghost');
+    Object.assign(el.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 400);
+}
+
+let tabsRenderedOnce = false;
+
 // Keyed DOM reconciliation for Tabs (avoids wiping DOM & restarting spinners on every update)
 function renderTabs() {
     const activeIds = new Set();
+    const animateNew = tabsRenderedOnce;
+    tabsRenderedOnce = true;
 
     currentState.tabs.forEach((tab, index) => {
         activeIds.add(tab.id);
@@ -145,6 +164,10 @@ function renderTabs() {
             const tabEl = document.createElement('div');
             tabEl.dataset.tabId = String(tab.id);
             tabEl.draggable = true;
+            if (animateNew) {
+                tabEl.dataset.new = '';
+                tabEl.addEventListener('animationend', () => tabEl.removeAttribute('data-new'), { once: true });
+            }
             tabEl.innerHTML = `
                 <span class="tab-icon">${ICONS.globe}</span>
                 <span class="tab-spinner"></span>
@@ -223,7 +246,7 @@ function renderTabs() {
 
     for (const [id, entry] of tabElements) {
         if (!activeIds.has(id)) {
-            entry.el.remove();
+            ghostTab(entry.el);
             tabElements.delete(id);
         }
     }

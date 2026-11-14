@@ -1,6 +1,8 @@
 # Viima 🦀🌐
 
-Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset Groupilta**, joka on rakennettu **Rustilla** ja **WebView2 / Wry / Tao** -arkkitehtuurilla.
+🇫🇮 **Kehitetty Suomessa / Made in Finland.** Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset Groupilta**, joka on rakennettu **Rustilla** ja **WebView2 / Wry / Tao** -arkkitehtuurilla.
+
+**Dokumentaatio:** [Arkkitehtuuri](docs/ARCHITECTURE.md) · [Laajennukset](docs/EXTENSIONS.md) · [Osallistuminen](docs/CONTRIBUTING.md) · [Muutosloki](CHANGELOG.md)
 
 ![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)
@@ -38,6 +40,10 @@ Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset 
   - "Muokkaa"-painikkeella widgettejä voi lisätä, poistaa, siirtää ja leventää. Kellon ulkoasu (digitaalinen/analoginen, fontti, koko, väri) on säädettävissä.
   - Valittavat taustakuvat (Aurora, Glass Waves, Nordic Light).
 - **🖼️ Oikeat faviconit**: sivustojen ikonit haetaan ja tallennetaan välimuistiin, joten ne näkyvät välilehdissä, kirjanmerkeissä ja aloitussivulla myös uudelleenkäynnistyksen jälkeen.
+- **💾 Kaikki säilyy**: asetukset, kirjanmerkit, avoimet välilehdet, ikkunan koko, aloitussivun asettelu ja taustakuva tallentuvat heti ja palautuvat uudelleenkäynnistyksessä ja koneen käynnistyksen jälkeen. Tarkka luettelo: [Mitä tallentuu ja minne](docs/ARCHITECTURE.md#mitä-tallentuu-ja-minne).
+- **⚙️ Asetukset sivunavigaatiolla**: Yleiset, Ulkoasu, Tietosuoja ja turvallisuus, Laajennukset, Päivitykset ja Tietoja. Uuden osion lisääminen on yksi linkki ja yksi `<section>`.
+- **🧩 Laajennukset**: purettu Chromium-laajennus (Manifest V3) toimii kopioimalla kansio laajennuskansioon. Hallinta Asetuksissa. Opas: [docs/EXTENSIONS.md](docs/EXTENSIONS.md).
+- **✨ Animaatiot**: välilehden avautuminen ja sulkeutuminen, painikkeiden painallukset, valikot ja asetussivun osiot. Ne kunnioittavat Windowsin "vähennä animaatioita" -asetusta.
 - **🗂️ Sisäsivut omissa välilehdissään**: kirjanmerkit, historia, lataukset ja asetukset avautuvat uuteen välilehteen (jo auki oleva käytetään uudelleen).
 - **📦 Windows-asennusohjelma ja automaattiset päivitykset**:
   - Käyttäjäkohtainen asennus kansioon `%LOCALAPPDATA%\IT-Veljekset\Viima` (`Viima-Setup.exe`, ei järjestelmänvalvojan oikeuksia, `--silent`-tuki, Käynnistä-valikon ja työpöydän pikakuvakkeet sekä Windowsin Sovellukset ja ominaisuudet -poistomerkintä).
@@ -77,6 +83,7 @@ Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset 
 ```bash
 cargo run
 ```
+Testaa erillisellä profiililla, ettei kehitysversio koske oikeisiin asetuksiin: aseta `VIIMA_PROFILE_DIR` absoluuttiseen kansioon (ks. [CONTRIBUTING](docs/CONTRIBUTING.md)).
 
 ### Tuotantoversion ja asennusohjelman kääntäminen
 Suositeltu tapa kääntää koko tuotantopaketti (`Viima.exe`, `Viima-Setup.exe`, `Viima_v*_Windows_x64.zip` ja `latest.json` kansioihin `releases/latest/` ja `releases/v<versio>/`):
@@ -99,6 +106,7 @@ viima/
 ├── build.rs                    # Exe-ikoni ja asennusohjelman upotettu binääri
 ├── .github/workflows/
 │   └── release.yml             # Tagista (v*) käännös, allekirjoitus ja GitHub Release
+├── docs/                       # ARCHITECTURE.md, EXTENSIONS.md, CONTRIBUTING.md, examples/hei-viima
 ├── scripts/
 │   └── build_release.ps1       # Julkaisupaketin, asennusohjelman ja latest.json-luonti (CI käyttää tätä)
 ├── src/
@@ -112,6 +120,7 @@ viima/
 │   │   └── remote.rs           # Faviconit ja widgetien (sää, kurssit) verkkohaut
 │   ├── tab.rs                  # Välilehden tila
 │   ├── storage.rs              # Kirjanmerkit, asetukset ja istunto (JSON)
+│   ├── extensions.rs           # Laajennuskansiot (WebView2-laajennukset)
 │   ├── history_db.rs           # Selaushistoria (SQLite)
 │   ├── favicon.rs              # Faviconien haku ja välimuisti (vain julkiset osoitteet)
 │   ├── widgets.rs              # Aloitussivun widgetien sallitut pyyntömallit
@@ -141,7 +150,8 @@ viima/
 - **Sisäsivut suojattu**: web-sivu ei voi upottaa asetus- tai historiasivuja (clickjacking) eikä lähettää selaimelle muita komentoja kuin pikanäppäimiä.
 - **`window.open`/`target=_blank`** avaa vain `http(s)`-osoitteita, ei `file://`-osoitteita.
 - Kirjautumiset säilyvät uudelleenkäynnistyksen yli: `%LOCALAPPDATA%\IT-Veljekset\Viima\data\WebView2` (kuten Edgessä). Poista kansio, jos haluat kirjautua kaikkialta ulos.
-- Huomio: selain on uusi eikä sisällä salasananhallintaa tai laajennuksia. Google voi estää kirjautumisen upotetuissa selaimissa.
+- Laajennukset ovat purettuja Chromium-laajennuksia omasta kansiosta; Viima ei asenna eikä päivitä niitä eikä käytä niitä yksityisessä ikkunassa. Asenna vain luotettuja.
+- Huomio: selain on uusi eikä sisällä salasananhallintaa. Google voi estää kirjautumisen upotetuissa selaimissa.
 
 ## 🔒 Yksityisyys ja tietosuoja
 

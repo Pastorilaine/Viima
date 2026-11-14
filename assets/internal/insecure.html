@@ -18,6 +18,13 @@
         .actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
         button { border: 1px solid var(--border); background: var(--btn); color: var(--text); padding: 9px 16px; border-radius: 8px; font-size: 13.5px; cursor: pointer; }
         button.primary { background: #0284c7; border-color: #0284c7; color: #fff; font-weight: 600; }
+        /* Motion: the page settles in once; presses give feedback. */
+        @media (prefers-reduced-motion: no-preference) {
+            body { animation: page-in 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+            @keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
+            button { transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s; }
+            button:active:not(:disabled) { transform: scale(0.97); }
+        }
     </style>
 </head>
 <body>

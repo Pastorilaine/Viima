@@ -338,8 +338,31 @@ impl BrowserApp {
         }
     }
 
+    /// Extension list for open Settings pages. `started` = what this run actually loaded, so the
+    /// page can tell when a restart is needed.
+    pub(super) fn push_extensions(&self) {
+        let payload = serde_json::json!({
+            "list": crate::extensions::list(),
+            "started": self.extensions_started,
+            "private": self.private,
+            "folder": crate::extensions::enabled_dir().to_string_lossy(),
+        });
+        let script = format!(
+            "if (location.origin === 'http://browser.settings' && window.onExtensions) {{ window.onExtensions({payload}); }}"
+        );
+        for tab in &self.tabs {
+            if InternalPage::from_url(&tab.url) == Some(InternalPage::Settings) {
+                tab.run_script(&script);
+            }
+        }
+    }
+
     pub(super) fn on_tick(&mut self) {
         self.sleep_idle_tabs();
+        // Window size too, so a crash or Windows shutdown doesn't lose it.
+        if !self.private {
+            self.save_window_state();
+        }
         self.favicons.save();
         let s = &self.storage.data.settings;
         let stale =

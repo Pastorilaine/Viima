@@ -63,7 +63,9 @@ impl BrowserApp {
         let http_allowed = self.http_allowed.clone();
         let nav_upgraded = upgraded.clone();
 
+        let ext_enabled = self.extensions_path.is_some();
         let builder = WebViewBuilder::new_with_web_context(&mut self.web_context)
+            .with_browser_extensions_enabled(ext_enabled)
             .with_theme(web_theme(DARK_MODE.load(Ordering::Relaxed)))
             .with_additional_browser_args(BROWSER_ARGS)
             .with_incognito(self.private)

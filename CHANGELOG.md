@@ -5,6 +5,22 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.6.0] - 2026-11-14
+
+### 🌟 Uutta (Added)
+- **Laajennukset**: Viima lataa purettuja Chromium-laajennuksia (Manifest V3/V2) kansiosta `%APPDATA%\IT-Veljekset\Viima\config\extensions`. Asetukset → Laajennukset näyttää listan, kytkee laajennukset päälle ja pois, poistaa ne ja avaa kansion. Virheelliset kohteet siirretään `extensions-invalid`-kansioon. Laajennukset eivät ole käytössä yksityisessä ikkunassa. Opas ja esimerkki: `docs/EXTENSIONS.md`, `docs/examples/hei-viima`.
+- **Asetukset sivunavigaatiolla**: Yleiset, Ulkoasu, Tietosuoja ja turvallisuus, Laajennukset, Päivitykset ja Tietoja. Osiot avautuvat osoitteella (`#extensions`, `#privacy` jne.), ja "Tallennettu"-ilmoitus vahvistaa muutokset.
+- **Animaatiot**: välilehden avautuminen ja sulkeutuminen, painikkeiden painallukset, tähden täyttyminen, valikot ja asetusosioiden vaihto sekä sisäsivujen aukeaminen. Kaikki kunnioittavat `prefers-reduced-motion`-asetusta.
+- **Kehitetty Suomessa** -maininta asetusten Tietoja-osiossa, aloitussivun alareunassa ja README:ssä.
+- **Kehittäjädokumentaatio**: `docs/ARCHITECTURE.md` (rakenne ja mitä tallentuu minne), `docs/EXTENSIONS.md` ja `docs/CONTRIBUTING.md`.
+- `VIIMA_PROFILE_DIR`: erillinen profiilikansio testaamiseen ja siirrettävään käyttöön.
+
+### ⚡ Muutokset (Changed)
+- **Aloitussivun asettelu ja taustakuva tallentuvat selaimen omaan tiedostoon** (`browser_data.json`), ei vain web-profiiliin. Ne palautuvat, vaikka WebView2-profiili poistettaisiin. Vanhat valinnat siirtyvät automaattisesti.
+- Ikkunan koko tallennetaan minuutin välein, joten kaatuminen tai koneen sammutus ei hävitä sitä.
+
+---
+
 ## [0.5.1] - 2026-11-14
 
 ### ⚡ Muutokset (Changed)

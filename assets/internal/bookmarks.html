@@ -61,6 +61,13 @@
         .bookmark-remove { border: 0; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 4px 6px; }
         .bookmark-remove:hover { color: #ef4444; }
         .empty-state { padding: 32px; text-align: center; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; }
+        /* Motion: the page settles in once; presses give feedback. */
+        @media (prefers-reduced-motion: no-preference) {
+            body { animation: page-in 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+            @keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
+            button { transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s; }
+            button:active:not(:disabled) { transform: scale(0.97); }
+        }
     </style>
 </head>
 <body>
