@@ -5,6 +5,17 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.4.2] - 2026-11-14
+
+### ⚡ Muutokset (Changed)
+- **Välilehdet**: aktiivinen välilehti sulautuu työkalupalkkiin, passiivisten välilehtien välissä ohuet erottimet ja sulkunappi näkyy vain hiiren ollessa päällä.
+- **Osoiterivi** korostaa sivuston oikean osoitteen (domain kirkkaana, muu osoite himmeänä) — huijausosoitteet erottuvat helpommin.
+- **Latausviiva** yläpalkin alareunassa sivun latautuessa.
+- **Suojakilpi** näyttää estettyjen pyyntöjen määrän pienenä merkkinä.
+- Näkyvät focus-kehykset näppäimistökäyttöön, Windowsin "vähennä liikettä" -asetuksen tuki ja Segoe UI Variable -fontti.
+
+---
+
 ## [0.4.1] - 2026-11-13
 
 ### 🔒 Tietoturva (Security)
