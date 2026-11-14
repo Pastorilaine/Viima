@@ -6,6 +6,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Matala prioriteetti: cargo/rustc perivat sen, joten kaantaminen ei syo pelin tai aanen suoritusaikaa.
+try { (Get-Process -Id $PID).PriorityClass = 'BelowNormal' } catch { }
+
 $LowerAe = [char]0x00E4
 $LowerOe = [char]0x00F6
 $UpperAe = [char]0x00C4
