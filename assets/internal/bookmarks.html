@@ -84,6 +84,7 @@
         <div id="content"></div>
     </div>
     <script src="i18n.js"></script>
+    <script src="favicons.js"></script>
     <script>
         const content = document.getElementById('content');
         const notice = document.getElementById('notice');
@@ -100,14 +101,13 @@
             const icon = document.createElement('div');
             icon.className = 'bookmark-icon';
             icon.textContent = '★';
-            try {
-                const u = new URL(item.url);
+            const iconUrl = viimaFavicons.get(item.url);
+            if (iconUrl) {
                 const img = document.createElement('img');
                 img.alt = '';
-                img.referrerPolicy = 'no-referrer';
-                img.src = `${u.origin}/favicon.ico`;
-                img.addEventListener('load', () => icon.replaceChildren(img), { once: true });
-            } catch {}
+                img.src = iconUrl;
+                icon.replaceChildren(img);
+            }
             const link = document.createElement('a');
             link.className = 'bookmark-main';
             link.href = item.url;
@@ -210,11 +210,15 @@
             }
             if (state.bookmarks) {
                 bookmarks = state.bookmarks;
+                viimaFavicons.want(bookmarks.map(b => b.url));
                 // Don't rebuild while the user is typing a folder name.
                 if (!(document.activeElement && document.activeElement.classList.contains('folder-input'))) render();
             }
         };
 
+        viimaFavicons.onUpdate(() => {
+            if (!(document.activeElement && document.activeElement.classList.contains('folder-input'))) render();
+        });
         toggleBar.addEventListener('change', () => send('set_setting', { key: 'show_bookmarks_bar', value: toggleBar.checked }));
         document.getElementById('btnExport').addEventListener('click', exportNetscape);
         const fileInput = document.getElementById('fileImport');

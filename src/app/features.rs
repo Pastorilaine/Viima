@@ -340,6 +340,7 @@ impl BrowserApp {
 
     pub(super) fn on_tick(&mut self) {
         self.sleep_idle_tabs();
+        self.favicons.save();
         let s = &self.storage.data.settings;
         let stale =
             now_secs().saturating_sub(s.adblock_lists_updated) > crate::adblock::LIST_MAX_AGE_SECS;

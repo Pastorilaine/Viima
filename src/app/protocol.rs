@@ -17,6 +17,7 @@ fn asset(host: &str, path: &str) -> Option<(&'static str, &'static [u8])> {
             ));
         }
         "/i18n.js" => return Some((JS, include_bytes!("../../assets/i18n.js"))),
+        "/favicons.js" => return Some((JS, include_bytes!("../../assets/favicons.js"))),
         _ => {}
     }
     let page = host.strip_prefix("browser.").unwrap_or(host);

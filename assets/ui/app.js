@@ -165,7 +165,8 @@ function renderTabs() {
         }
 
         // Site favicon, falling back to the globe if it fails to load.
-        const favicon = internalPage(tab.url || '') ? null : (tab.favicon || null);
+        // The cached copy (from Rust) wins: it needs no network and survives restarts.
+        const favicon = internalPage(tab.url || '') ? null : (viimaFavicons.get(tab.url) || tab.favicon || null);
         if (entry.favicon !== favicon) {
             entry.favicon = favicon;
             if (favicon) {
@@ -427,14 +428,6 @@ function renderActiveTab() {
     }
 }
 
-function siteIcon(url) {
-    try {
-        const u = new URL(url);
-        if (u.protocol === 'https:' || u.protocol === 'http:') return `${u.origin}/favicon.ico`;
-    } catch {}
-    return null;
-}
-
 // Bookmarks bar: root bookmarks as chips, folders open a native menu.
 function renderBookmarksBar() {
     const show = Boolean(currentState.settings && currentState.settings.show_bookmarks_bar);
@@ -461,19 +454,17 @@ function renderBookmarksBar() {
         const chip = document.createElement('button');
         chip.className = 'bm-chip';
         chip.title = `${b.title}\n${b.url}`;
-        const icon = siteIcon(b.url);
-        const fallback = document.createElement('span');
-        fallback.className = 'bm-letter';
-        fallback.textContent = (b.title || b.url || '?').trim().charAt(0).toUpperCase();
+        const icon = viimaFavicons.get(b.url);
         if (icon) {
             const img = document.createElement('img');
             img.alt = '';
-            img.referrerPolicy = 'no-referrer';
             img.src = icon;
-            img.addEventListener('error', () => img.replaceWith(fallback), { once: true });
             chip.appendChild(img);
         } else {
-            chip.appendChild(fallback);
+            const letter = document.createElement('span');
+            letter.className = 'bm-letter';
+            letter.textContent = (b.title || b.url || '?').trim().charAt(0).toUpperCase();
+            chip.appendChild(letter);
         }
         const label = document.createElement('span');
         label.textContent = b.title || b.url;
@@ -508,6 +499,7 @@ window.onBrowserStateUpdate = function(state) {
     currentState = Object.assign(currentState, state);
     state = currentState;
     document.documentElement.toggleAttribute('data-private', Boolean(state.private));
+    viimaFavicons.want([...state.tabs.map(t => t.url), ...(state.bookmarks || []).map(b => b.url)]);
     renderTabs();
     renderActiveTab();
     renderBookmarksBar();
@@ -586,13 +578,21 @@ btnHomeEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://
 btnStarBookmarkEl.addEventListener('click', () => sendIpc('toggle_bookmark'));
 zoomBadgeEl.addEventListener('click', () => sendIpc('zoom', { dir: 0 }));
 btnAdblockEl.addEventListener('click', () => sendIpc('shield_menu'));
-btnDownloadsEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://downloads' }));
+btnDownloadsEl.addEventListener('click', () => sendIpc('new_tab', { url: 'browser://downloads' }));
 document.getElementById('btnTheme').addEventListener('click', () => sendIpc('toggle_theme'));
 
-// Navigate directly to internal pages on toolbar clicks
-btnBookmarksMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://bookmarks' }));
-btnHistoryMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://history' }));
-btnSettingsMenuEl.addEventListener('click', () => sendIpc('navigate', { url: 'browser://settings' }));
+// Bookmarks, history, downloads and settings open in a tab of their own (an open one is reused),
+// so the page you're on stays put.
+btnBookmarksMenuEl.addEventListener('click', () => sendIpc('new_tab', { url: 'browser://bookmarks' }));
+btnHistoryMenuEl.addEventListener('click', () => sendIpc('new_tab', { url: 'browser://history' }));
+btnSettingsMenuEl.addEventListener('click', () => sendIpc('new_tab', { url: 'browser://settings' }));
+
+// Icons arrive from Rust a moment after the tabs/bookmarks they belong to.
+viimaFavicons.onUpdate(() => {
+    renderTabs();
+    lastBarKey = '';
+    renderBookmarksBar();
+});
 
 if (btnUpdateAppEl) {
     btnUpdateAppEl.addEventListener('click', () => {
@@ -678,9 +678,9 @@ window.addEventListener('keydown', (e) => {
     } else if (ctrl && !e.shiftKey && key === 'd') {
         sendIpc('toggle_bookmark');
     } else if (ctrl && !e.shiftKey && key === 'h') {
-        sendIpc('navigate', { url: 'browser://history' });
+        sendIpc('new_tab', { url: 'browser://history' });
     } else if (ctrl && !e.shiftKey && key === 'j') {
-        sendIpc('navigate', { url: 'browser://downloads' });
+        sendIpc('new_tab', { url: 'browser://downloads' });
     } else if (ctrl && !e.shiftKey && key === 'f') {
         sendIpc('find');
     } else if (ctrl && !e.shiftKey && key === 'p') {

@@ -26,8 +26,8 @@ fn shortcut(key: &str) -> Option<AppEvent> {
         "new_tab" => AppEvent::IpcNewTab(None),
         "close_tab" => AppEvent::IpcCloseActiveTab,
         "focus_omnibox" => AppEvent::IpcFocusOmnibox,
-        "history" => AppEvent::IpcNavigate("browser://history".into()),
-        "downloads" => AppEvent::IpcNavigate("browser://downloads".into()),
+        "history" => AppEvent::IpcNewTab(Some("browser://history".into())),
+        "downloads" => AppEvent::IpcNewTab(Some("browser://downloads".into())),
         "reopen_tab" => AppEvent::IpcReopenTab,
         "next_tab" => AppEvent::IpcCycleTab(true),
         "prev_tab" => AppEvent::IpcCycleTab(false),
@@ -119,6 +119,21 @@ pub fn parse(body: &str, trusted: bool, tab_id: Option<usize>) -> Option<AppEven
         "install_update" => AppEvent::IpcInstallUpdate,
         "toggle_auto_update" => AppEvent::IpcToggleAutoUpdate,
         "set_update_url" => AppEvent::IpcSetUpdateUrl(s(&v, "url")?),
+        "request_favicons" => AppEvent::IpcRequestFavicons(
+            v.get("hosts")?
+                .as_array()?
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|h| h.len() <= 253)
+                .take(48)
+                .map(str::to_string)
+                .collect(),
+        ),
+        "widget_fetch" => AppEvent::IpcWidgetFetch(
+            s(&v, "kind")?,
+            s(&v, "key")?.chars().take(64).collect(),
+            v.get("params").cloned().unwrap_or(Value::Null),
+        ),
         "request_initial_state" => AppEvent::IpcRequestInitialState,
         "autocomplete" => AppEvent::IpcAutocomplete(s(&v, "q")?),
         "find" => AppEvent::IpcFind,
@@ -164,6 +179,19 @@ mod tests {
         assert!(!is_trusted_ipc_source(&uri("http://browser.settings.evil.com/")));
         assert!(!is_trusted_ipc_source(&uri("https://evil.com/browser.settings")));
         assert!(!is_trusted_ipc_source(&uri("https://browser.settings/")));
+    }
+
+    #[test]
+    fn test_icon_and_widget_requests_are_trusted_only() {
+        let icons = r#"{"action":"request_favicons","hosts":["yle.fi",7,"a.fi"]}"#;
+        assert!(parse(icons, false, Some(1)).is_none());
+        assert!(matches!(
+            parse(icons, true, None),
+            Some(AppEvent::IpcRequestFavicons(h)) if h == ["yle.fi", "a.fi"]
+        ));
+        let widget = r#"{"action":"widget_fetch","kind":"quote","key":"k1","params":{"symbol":"AAPL"}}"#;
+        assert!(parse(widget, false, Some(1)).is_none());
+        assert!(matches!(parse(widget, true, None), Some(AppEvent::IpcWidgetFetch(..))));
     }
 
     #[test]

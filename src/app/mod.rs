@@ -1,9 +1,11 @@
 mod features;
 pub(crate) mod ipc;
 mod protocol;
+mod remote;
 mod tabs;
 
 use crate::adblock::AdBlocker;
+use crate::favicon::FaviconCache;
 use crate::history_db::HistoryDb;
 use crate::i18n::{self, tr};
 use crate::storage::{
@@ -116,6 +118,10 @@ pub enum AppEvent {
     IpcMaximize,
     IpcClose,
     IpcDragWindow,
+    /// Hosts whose site icons the page wants.
+    IpcRequestFavicons(Vec<String>),
+    /// (kind, request key, values): start-page widget data, see `widgets`.
+    IpcWidgetFetch(String, String, serde_json::Value),
 
     /// URLs handed over by a second `Viima.exe <url>` launch.
     OpenUrls(Vec<String>),
@@ -134,6 +140,14 @@ pub enum AppEvent {
     SiteDataCleared(String),
 
     // Background work
+    /// (host, icon as a data: URL or None when the site has none)
+    FaviconsReady(Vec<(String, Option<String>)>),
+    WidgetData {
+        kind: String,
+        key: String,
+        url: String,
+        result: Result<String, String>,
+    },
     FilterListsUpdated(Result<usize, String>),
     Tick,
     UpdateCheckFinished {
@@ -284,6 +298,8 @@ pub struct BrowserApp {
     last_filter_attempt: Option<Instant>,
     last_download_push: Instant,
     last_private_spawn: Option<Instant>,
+    favicons: FaviconCache,
+    widget_cache: remote::WidgetCache,
 }
 
 impl BrowserApp {
@@ -379,6 +395,8 @@ impl BrowserApp {
             last_filter_attempt: None,
             last_download_push: Instant::now(),
             last_private_spawn: None,
+            favicons: FaviconCache::load(private),
+            widget_cache: Default::default(),
         };
         app.layout();
 
@@ -610,6 +628,10 @@ impl BrowserApp {
             IpcDragWindow => {
                 let _ = self.window.drag_window();
             }
+            IpcRequestFavicons(hosts) => self.request_favicons(hosts),
+            IpcWidgetFetch(kind, key, params) => self.widget_fetch(kind, key, params),
+            FaviconsReady(results) => self.on_favicons_ready(results),
+            WidgetData { kind, key, url, result } => self.on_widget_data(kind, key, url, result),
             OpenUrls(urls) => {
                 if urls.is_empty() {
                     let home = self.storage.data.settings.home_page.clone();
@@ -628,8 +650,9 @@ impl BrowserApp {
                 if let Some(tab) = self.tab_mut(id)
                     && tab.favicon.as_deref() != Some(url.as_str())
                 {
-                    tab.favicon = Some(url);
+                    tab.favicon = Some(url.clone());
                     self.update_ui();
+                    self.learn_tab_favicon(id, &url);
                 }
             }
             TabAudio(id, playing) => {
@@ -868,6 +891,7 @@ impl BrowserApp {
             self.save_window_state();
         }
         self.storage.flush();
+        self.favicons.save();
         if let Some(dir) = self.private_dir.take() {
             // WebView2 still holds the profile for a moment after exit: delete it from a
             // detached helper. Leftovers are also swept on the next private window.

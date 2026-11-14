@@ -166,6 +166,20 @@ impl BrowserApp {
     }
 
     pub(super) fn new_tab(&mut self, url: Option<String>) {
+        // Settings, history, downloads and bookmarks open in a tab of their own, and one is
+        // enough: asking for it again just goes back to it. (Start pages can be many.)
+        let wanted = url.as_deref().and_then(InternalPage::from_url);
+        if let Some(kind) = wanted
+            && !matches!(kind, InternalPage::NewTab | InternalPage::Insecure)
+            && let Some(id) = self
+                .tabs
+                .iter()
+                .find(|t| InternalPage::from_url(&t.url) == Some(kind))
+                .map(|t| t.id)
+        {
+            self.switch_tab(id);
+            return;
+        }
         self.open_tab_at(url, None);
     }
 

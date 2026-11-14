@@ -2,6 +2,7 @@
 
 mod adblock;
 mod app;
+mod favicon;
 mod history_db;
 mod i18n;
 mod storage;
@@ -11,6 +12,7 @@ mod updater;
 mod url_resolver;
 #[cfg(windows)]
 mod webview_hooks;
+mod widgets;
 #[cfg(windows)]
 mod win_platform;
 #[cfg(windows)]
