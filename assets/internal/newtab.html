@@ -6,18 +6,20 @@
     <title data-i18n="nt.page_title">Uusi välilehti — Viima</title>
     <link rel="icon" type="image/png" href="viima-logo.png">
     <style>
-        /* Start page = a board of widgets on a 12-column grid. Flat panels, 1px rules,
-           tabular numerals. Fonts are the ones Windows ships: pages can't load web fonts. */
+        /* Start page: no boxes. Content sits straight on the wallpaper along one left edge;
+           the clock is the one big thing, everything else is quiet text. Windows' own fonts,
+           since internal pages can't load web fonts. */
         :root {
             --page: #0e0f12;
-            --panel: rgba(14, 15, 18, 0.8);
-            --text: #ecebe6;
-            --dim: #9a9a94;
-            --line: rgba(255, 255, 255, 0.16);
-            --accent: #4cc9f0;
+            --text: #f2f0ea;
+            --dim: #a8acb3;
+            --rule: rgba(255, 255, 255, 0.3);
+            --menu: #14161b;
+            --shade: rgba(0, 0, 0, 0.55);
+            --accent: #7dd3fc;
             --on-accent: #06222b;
-            --up: #3ddc97;
-            --down: #ff6b6b;
+            --up: #4ade9b;
+            --down: #ff7a7a;
             --sans: "Bahnschrift", "Segoe UI Variable Text", "Segoe UI", sans-serif;
             --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
             color-scheme: dark;
@@ -25,10 +27,11 @@
 
         :root[data-theme="light"] {
             --page: #f4f3ee;
-            --panel: rgba(250, 249, 245, 0.9);
-            --text: #16171a;
-            --dim: #5e5e58;
-            --line: rgba(0, 0, 0, 0.18);
+            --text: #17181b;
+            --dim: #585a60;
+            --rule: rgba(0, 0, 0, 0.3);
+            --menu: #ffffff;
+            --shade: rgba(255, 255, 255, 0.75);
             --accent: #0a6c8e;
             --on-accent: #ffffff;
             --up: #0e8a5a;
@@ -41,7 +44,8 @@
         body {
             background: var(--page);
             color: var(--text);
-            font: 400 14px/1.4 var(--sans);
+            font: 400 15px/1.45 var(--sans);
+            font-variant-numeric: tabular-nums;
             min-height: 100vh;
             user-select: none;
             overflow-x: hidden;
@@ -49,14 +53,13 @@
 
         button, input, select { font: inherit; color: inherit; }
         button { cursor: pointer; }
-        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-        /* Wallpaper + flat scrim (keeps panel text readable on any picture) */
         .bg-wallpaper, .bg-scrim { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
         .bg-wallpaper { background-size: cover; background-position: center; opacity: 0; transition: opacity 0.3s; }
         .bg-wallpaper.visible { opacity: 1; }
         .bg-scrim { opacity: 0; }
-        body[data-bg-tone="dark"] .bg-scrim { opacity: 1; background: rgba(8, 9, 12, 0.5); }
+        body[data-bg-tone="dark"] .bg-scrim { opacity: 1; background: rgba(8, 9, 12, 0.46); }
         body[data-bg-tone="light"] .bg-scrim { opacity: 1; background: rgba(244, 243, 238, 0.5); }
 
         .board {
@@ -64,65 +67,47 @@
             z-index: 1;
             display: grid;
             grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 16px;
+            gap: 56px 32px;
             align-content: start;
-            padding: 32px 40px 96px;
+            padding: clamp(32px, 9vh, 96px) clamp(24px, 4vw, 64px) 120px;
             min-height: 100vh;
+            text-shadow: 0 1px 16px var(--shade);
         }
 
         .private-note {
             display: none;
             grid-column: 1 / -1;
-            padding: 8px 16px;
-            border: 1px solid var(--line);
-            border-left: 3px solid #a855f7;
-            background: var(--panel);
-            font-size: 13px;
+            margin-bottom: -24px;
+            padding-left: 12px;
+            border-left: 2px solid #a855f7;
+            font-size: 14px;
         }
         html[data-private] .private-note { display: block; }
 
-        /* Widget panel */
+        /* Widget: no panel, only a column span */
         .w {
             grid-column: span var(--span, 4);
             min-width: 0;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            padding: 16px 20px 20px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 2px;
         }
 
-        .w-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            min-height: 20px;
-            font: 600 11px/1 var(--mono);
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--dim);
-        }
-
+        .w-head { display: none; align-items: center; justify-content: space-between; gap: 8px; color: var(--dim); font-size: 13px; }
         .w-head .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        body.editing .w-head { display: flex; }
+        body.editing .w { outline: 1px dashed var(--accent); outline-offset: 10px; }
 
-        .w-tools { display: none; gap: 4px; flex-shrink: 0; }
-        body.editing .w { outline: 1px dashed var(--accent); outline-offset: 3px; }
-        body.editing .w-tools { display: flex; }
-
+        .w-tools { display: flex; gap: 4px; flex-shrink: 0; }
         .tool {
-            min-width: 24px;
-            height: 24px;
+            min-width: 26px;
+            height: 26px;
             padding: 0 6px;
-            background: transparent;
-            border: 1px solid var(--line);
-            border-radius: 2px;
-            font: 600 11px/1 var(--mono);
-            letter-spacing: 0;
-            text-transform: none;
-            color: var(--text);
+            background: var(--menu);
+            border: 1px solid var(--rule);
+            border-radius: 4px;
+            font-size: 13px;
+            text-shadow: none;
         }
         .tool:hover { border-color: var(--accent); color: var(--accent); }
         .tool[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
@@ -131,9 +116,12 @@
             display: none;
             flex-direction: column;
             gap: 10px;
-            padding: 12px;
-            border: 1px dashed var(--line);
-            font-size: 13px;
+            padding: 16px;
+            background: var(--menu);
+            border: 1px solid var(--rule);
+            border-radius: 4px;
+            font-size: 14px;
+            text-shadow: none;
         }
         .w.open .opts { display: flex; }
         .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -143,51 +131,32 @@
             max-width: 60%;
             padding: 4px 8px;
             background: var(--page);
-            border: 1px solid var(--line);
-            border-radius: 2px;
+            border: 1px solid var(--rule);
+            border-radius: 4px;
             user-select: text;
         }
-        .field input[type="color"] { width: 40px; height: 24px; padding: 0; border: 1px solid var(--line); background: none; }
+        .field input[type="color"] { width: 40px; height: 24px; padding: 0; border: 1px solid var(--rule); background: none; }
         .field input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
-        .btn {
-            padding: 4px 10px;
-            background: transparent;
-            border: 1px solid var(--line);
-            border-radius: 2px;
-            font: 600 12px/1.4 var(--mono);
-        }
+        .btn { padding: 4px 12px; background: transparent; border: 1px solid var(--rule); border-radius: 4px; font-size: 13px; }
         .btn:hover { border-color: var(--accent); color: var(--accent); }
-        .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-        .btn.primary:hover { color: var(--on-accent); filter: brightness(1.1); }
         .results { display: flex; flex-direction: column; gap: 4px; }
-        .results .btn { text-align: left; font-family: var(--sans); font-weight: 400; }
-        .muted { color: var(--dim); font-size: 12px; }
+        .results .btn { text-align: left; }
+        .muted { color: var(--dim); font-size: 13px; }
 
-        /* Search */
-        .search-form { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid var(--text); padding-bottom: 4px; }
+        /* Search: one line, underlined */
+        .search-form { max-width: 720px; border-bottom: 1px solid var(--rule); transition: border-color 0.15s; }
         .search-form:focus-within { border-color: var(--accent); }
-        .search-input {
-            flex: 1;
-            min-width: 0;
-            height: 44px;
-            background: transparent;
-            border: none;
-            outline: none;
-            font-size: 20px;
-            user-select: text;
-        }
+        .search-input { width: 100%; height: 52px; background: transparent; border: none; outline: none; font-size: 22px; user-select: text; }
         .search-input::placeholder { color: var(--dim); }
-        .search-go { color: var(--dim); font: 600 12px var(--mono); letter-spacing: 0.1em; }
 
-        /* Clock */
-        .clock { container-type: inline-size; display: flex; flex-direction: column; gap: 6px; }
+        /* Clock: the one big thing */
+        .clock { container-type: inline-size; display: flex; flex-direction: column; gap: 8px; }
         .clock[data-align="center"] { align-items: center; text-align: center; }
         .clock-time {
             --ff: 1;
-            font-size: clamp(32px, calc(var(--cs) * var(--ff)), 168px);
+            font-size: clamp(40px, calc(var(--cs) * var(--ff)), 180px);
             line-height: 1;
-            letter-spacing: -0.02em;
-            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
             font-family: var(--sans);
             font-weight: 400;
             color: var(--clock-color, var(--text));
@@ -200,82 +169,57 @@
         .clock[data-size="m"] { --cs: 12cqi; }
         .clock[data-size="l"] { --cs: 16cqi; }
         .clock[data-size="xl"] { --cs: 20cqi; }
-        .clock-date { font-size: 16px; color: var(--dim); }
-        .clock-greet { font-size: 14px; font-weight: 600; letter-spacing: 0.04em; }
+        .clock-date { font-size: 20px; margin-top: 8px; }
+        .clock-greet { font-size: 16px; color: var(--dim); }
         .analog { width: min(100%, 240px); aspect-ratio: 1; color: var(--clock-color, var(--text)); }
 
         /* Weather */
         .wx-now { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-        .wx-temp { font: 300 56px/1 var(--mono); letter-spacing: -0.04em; }
-        .wx-cond { font-size: 16px; }
-        .wx-sub { color: var(--dim); font-size: 13px; }
-        .wx-days { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
-        .wx-day { padding: 10px 8px 0; display: flex; flex-direction: column; gap: 2px; }
-        .wx-day + .wx-day { border-left: 1px solid var(--line); }
-        .wx-day b { font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
-        .wx-day .range { font: 400 14px var(--mono); }
-        .wx-day .what { font-size: 12px; color: var(--dim); }
+        .wx-temp { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -0.03em; }
+        .wx-place { font-size: 22px; }
+        .wx-sub { color: var(--dim); font-size: 15px; }
+        .wx-days { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 8px; }
+        .wx-day { display: flex; flex-direction: column; }
+        .wx-day b { font-weight: 600; font-size: 15px; }
+        .wx-day .what { font-size: 13px; color: var(--dim); }
+        .stale { opacity: 0.6; }
 
-        /* Quotes */
-        .quotes { width: 100%; border-collapse: collapse; }
-        .quotes td { padding: 8px 0; border-top: 1px solid var(--line); vertical-align: baseline; }
-        .quotes tr:first-child td { border-top: none; padding-top: 0; }
-        .q-sym { font: 600 13px var(--mono); }
-        .q-name { display: block; max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--dim); }
-        .q-price, .q-chg { text-align: right; font: 400 14px var(--mono); white-space: nowrap; padding-left: 12px; }
+        /* Quotes: plain columns of text */
+        .quotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px 32px; }
+        .q { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .q-name { color: var(--dim); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .q-line { display: flex; align-items: baseline; gap: 12px; }
+        .q-price { font-size: 22px; font-weight: 300; white-space: nowrap; }
+        .q-chg { font-size: 15px; white-space: nowrap; }
         .up { color: var(--up); }
         .down { color: var(--down); }
-        .stale { opacity: 0.55; }
-        .rm { margin-left: 8px; }
+        .q-sym { font-weight: 600; }
+        .q.stale { opacity: 0.6; }
 
-        /* Shortcuts */
-        .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-        .tile {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-            padding: 12px 14px;
-            border-right: 1px solid var(--line);
-            border-bottom: 1px solid var(--line);
-            color: inherit;
-            text-decoration: none;
-        }
-        .tile:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-        .tile-icon { width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font: 700 12px var(--mono); border: 1px solid var(--line); }
-        .tile-icon:has(img) { background: #f4f3ee; border-color: transparent; } /* dark icons stay visible */
+        /* Shortcuts: icon + name, no borders */
+        .tiles { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-left: -12px; }
+        .tile { display: flex; align-items: center; gap: 10px; max-width: 220px; padding: 8px 12px; border-radius: 6px; color: inherit; text-decoration: none; }
+        .tile:hover { background: color-mix(in srgb, var(--text) 14%, transparent); }
+        .tile-icon { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 7px; background: color-mix(in srgb, var(--text) 18%, transparent); font-weight: 600; font-size: 13px; }
+        .tile-icon:has(img) { background: #f4f3ee; }
         .tile-icon img { width: 20px; height: 20px; object-fit: contain; }
-        .w[data-type="search"] .w-head { display: none; }
-        body.editing .w[data-type="search"] .w-head { display: flex; }
-        .tile-text { min-width: 0; display: flex; flex-direction: column; }
-        .tile-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tile-desc { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tile-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .foot { grid-column: 1 / -1; padding-top: 8px; font: 400 11px var(--mono); color: var(--dim); letter-spacing: 0.04em; }
-        body[data-bg-tone="dark"] .foot { color: rgba(236, 235, 230, 0.8); }
-        body[data-bg-tone="light"] .foot { color: #2b2b27; }
+        .foot { grid-column: 1 / -1; margin-top: -24px; font-size: 12px; color: var(--dim); }
+        body.editing .foot { display: none; }
 
-        /* Dock: wallpaper + edit controls */
-        .dock { position: fixed; right: 24px; bottom: 16px; z-index: 10; display: flex; gap: 8px; align-items: flex-end; }
-        .dock .btn { background: var(--panel); padding: 8px 12px; }
-        .dock .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-        .menu {
-            position: absolute;
-            right: 0;
-            bottom: 44px;
-            min-width: 232px;
-            display: none;
-            flex-direction: column;
-            padding: 4px;
-            background: var(--page);
-            border: 1px solid var(--line);
-        }
+        /* Dock: quiet text buttons */
+        .dock { position: fixed; right: clamp(24px, 4vw, 64px); bottom: 16px; z-index: 10; display: flex; gap: 20px; align-items: flex-end; text-shadow: 0 1px 10px var(--shade); }
+        .dock .btn { padding: 4px 0; border: none; color: var(--dim); font-size: 13px; }
+        .dock .btn:hover, .dock .btn[aria-pressed="true"] { color: var(--text); }
+        .dock .btn[aria-pressed="true"] { color: var(--accent); }
+        .menu { position: absolute; right: 0; bottom: 36px; min-width: 240px; display: none; flex-direction: column; padding: 4px; background: var(--menu); border: 1px solid var(--rule); border-radius: 6px; text-shadow: none; }
         .menu.open { display: flex; }
-        .menu-title { padding: 6px 8px; font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-        .menu-opt { display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: transparent; border: 1px solid transparent; text-align: left; font-size: 13px; }
-        .menu-opt:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+        .menu-title { padding: 6px 8px; font-size: 12px; color: var(--dim); }
+        .menu-opt { display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: transparent; border: 1px solid transparent; border-radius: 4px; text-align: left; font-size: 14px; }
+        .menu-opt:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
         .menu-opt.active { border-color: var(--accent); }
-        .thumb { width: 36px; height: 22px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--line); }
+        .thumb { width: 36px; height: 22px; object-fit: cover; flex-shrink: 0; border-radius: 3px; border: 1px solid var(--rule); }
         .thumb-auto { background: linear-gradient(90deg, #0b192c 50%, #dce7f5 50%); }
         .thumb-none { background: var(--page); }
         .menu-wrap { position: relative; }
@@ -283,13 +227,13 @@
         body.editing .edit-only { display: block; }
 
         @media (max-width: 900px) {
-            .board { padding: 16px 16px 96px; }
+            .board { gap: 40px 24px; }
             .w { grid-column: 1 / -1; }
         }
 
         @media (prefers-reduced-motion: no-preference) {
-            .w { animation: rise 0.28s ease-out backwards; animation-delay: calc(var(--i, 0) * 40ms); }
-            @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+            .w { animation: rise 0.4s ease-out backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+            @keyframes rise { from { opacity: 0; } }
         }
     </style>
 </head>
@@ -527,8 +471,7 @@
                     input.placeholder = t('nt.search', 'Hae verkosta tai kirjoita osoite...');
                     input.autocomplete = 'off';
                     input.spellcheck = false;
-                    const go = el('span', 'search-go', 'ENTER');
-                    form.append(input, go);
+                    form.appendChild(input);
                     form.addEventListener('submit', (e) => {
                         e.preventDefault();
                         const q = input.value.trim();
@@ -543,7 +486,7 @@
 
             clock: {
                 label: () => t('nt.w_clock', 'Kello'),
-                spans: [3, 4, 5, 6, 8, 12],
+                spans: [3, 4, 5, 6, 7, 8, 9, 12],
                 defaults: () => ({ ...CLOCK_DEFAULTS }),
                 mount(w, body) {
                     const o = { ...CLOCK_DEFAULTS, ...w.opts };
@@ -603,9 +546,9 @@
 
             weather: {
                 label: () => t('nt.w_weather', 'Sää'),
-                spans: [3, 4, 5, 6, 8, 12],
+                spans: [3, 4, 5, 6, 7, 8, 9, 12],
                 defaults: () => ({ place: { name: 'Helsinki', lat: 60.1699, lon: 24.9384 } }),
-                headLabel: (w) => `${t('nt.w_weather', 'Sää')} · ${w.opts.place ? w.opts.place.name : '—'}`,
+                headLabel: (w) => `${t('nt.w_weather', 'Sää')}: ${w.opts.place ? w.opts.place.name : '—'}`,
                 mount(w, body) {
                     const place = w.opts.place;
                     if (!place) { body.appendChild(el('div', 'muted', t('nt.wx_none', 'Valitse paikkakunta asetuksista.'))); return; }
@@ -613,14 +556,14 @@
                     const draw = (data, stale) => {
                         const c = data.current, d = data.daily;
                         const now = el('div', 'wx-now' + (stale ? ' stale' : ''));
-                        now.append(el('div', 'wx-temp', fmtTemp(c.temperature_2m)), el('div', 'wx-cond', wmo(c.weather_code)));
+                        now.append(el('div', 'wx-temp', fmtTemp(c.temperature_2m)), el('div', 'wx-place', place.name));
                         const sub = el('div', 'wx-sub' + (stale ? ' stale' : ''),
-                            `${t('nt.wx_feels', 'tuntuu')} ${fmtTemp(c.apparent_temperature)} · ${t('nt.wx_wind', 'tuuli')} ${Math.round(c.wind_speed_10m)} m/s`);
+                            `${wmo(c.weather_code)}, ${t('nt.wx_feels', 'tuntuu')} ${fmtTemp(c.apparent_temperature)}, ${t('nt.wx_wind', 'tuuli')} ${Math.round(c.wind_speed_10m)} m/s`);
                         const days = el('div', 'wx-days' + (stale ? ' stale' : ''));
                         for (let i = 1; i <= 3 && i < d.time.length; i++) {
                             const day = el('div', 'wx-day');
                             const name = new Date(d.time[i] + 'T12:00').toLocaleDateString(LOCALE, { weekday: 'short' });
-                            day.append(el('b', '', name), el('span', 'range', `${fmtTemp(d.temperature_2m_max[i])} / ${fmtTemp(d.temperature_2m_min[i])}`), el('span', 'what', wmo(d.weather_code[i])));
+                            day.append(el('b', '', name), el('span', '', `${fmtTemp(d.temperature_2m_max[i])} / ${fmtTemp(d.temperature_2m_min[i])}`), el('span', 'what', wmo(d.weather_code[i])));
                             days.appendChild(day);
                         }
                         body.replaceChildren(now, sub, days);
@@ -670,26 +613,26 @@
 
             stocks: {
                 label: () => t('nt.w_stocks', 'Pörssikurssit'),
-                spans: [3, 4, 5, 6, 8, 12],
+                spans: [3, 4, 5, 6, 7, 8, 9, 12],
                 defaults: () => ({ symbols: ['^OMXH25', 'NOKIA.HE', '^GSPC', 'BTC-EUR'] }),
                 mount(w, body) {
                     const symbols = (w.opts.symbols || []).filter((s) => SYMBOL_RE.test(s));
                     if (!symbols.length) { body.appendChild(el('div', 'muted', t('nt.q_none', 'Lisää seurattavia kursseja asetuksista.'))); return; }
-                    const table = el('table', 'quotes');
+                    const list = el('div', 'quotes');
                     const rows = {};
                     for (const s of symbols) {
-                        const tr = el('tr');
-                        const name = el('td');
-                        name.append(el('span', 'q-sym', s), el('span', 'q-name', ''));
-                        tr.append(name, el('td', 'q-price', '…'), el('td', 'q-chg', ''));
-                        table.appendChild(tr);
-                        rows[s] = tr;
+                        const q = el('div', 'q');
+                        const line = el('div', 'q-line');
+                        line.append(el('span', 'q-price', '…'), el('span', 'q-chg', ''));
+                        q.append(el('span', 'q-name', s), line);
+                        list.appendChild(q);
+                        rows[s] = q;
                     }
-                    body.appendChild(table);
+                    body.appendChild(list);
                     const paint = (s, q, stale) => {
                         const tr = rows[s];
                         tr.classList.toggle('stale', stale);
-                        tr.querySelector('.q-name').textContent = q.name;
+                        tr.querySelector('.q-name').textContent = q.name || s;
                         tr.querySelector('.q-price').textContent = `${fmtPrice(q.price)}${q.currency ? ' ' + (CURRENCY[q.currency] || q.currency) : ''}`;
                         const chg = tr.querySelector('.q-chg');
                         chg.textContent = q.pct === null ? '' : fmtPct(q.pct);
@@ -759,14 +702,12 @@
                         if (/^https?:\/\//i.test(url)) a.href = url; // never a javascript: link on this privileged page
                         const domain = getDomain(url);
                         const title = (item.title || domain || '?').trim();
-                        a.title = `${title} • ${url}`;
+                        a.title = `${title} (${domain})`;
                         const icon = el('span', 'tile-icon');
                         const src = viimaFavicons.get(url);
                         if (src) icon.appendChild(Object.assign(el('img'), { src, alt: '' }));
                         else icon.textContent = title.charAt(0).toUpperCase();
-                        const text = el('span', 'tile-text');
-                        text.append(el('span', 'tile-title', title), el('span', 'tile-desc', domain));
-                        a.append(icon, text);
+                        a.append(icon, el('span', 'tile-title', title));
                         grid.appendChild(a);
                     }
                     body.appendChild(grid);
@@ -784,12 +725,13 @@
         const LAYOUT_KEY = 'viima_newtab_layout';
         function defaultLayout() {
             const mk = (type, span) => ({ id: uid(), type, span, opts: TYPES[type].defaults() });
-            return { v: 1, widgets: [mk('search', 12), mk('clock', 5), mk('weather', 3), mk('stocks', 4), mk('shortcuts', 12)] };
+            // v2: the boxed v1 layout is replaced by this one (clock + weather, search, links, quotes)
+            return { v: 2, widgets: [mk('clock', 7), mk('weather', 5), mk('search', 12), mk('shortcuts', 12), mk('stocks', 12)] };
         }
         function loadLayout() {
             try {
                 const l = JSON.parse(storageGet(LAYOUT_KEY));
-                if (l && l.v === 1 && Array.isArray(l.widgets)) {
+                if (l && l.v === 2 && Array.isArray(l.widgets)) {
                     l.widgets = l.widgets.filter((w) => w && TYPES[w.type]).map((w) => ({ id: String(w.id || uid()), type: w.type, span: Number(w.span) || 4, opts: w.opts && typeof w.opts === 'object' ? w.opts : {} }));
                     return l;
                 }
