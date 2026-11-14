@@ -4,9 +4,11 @@
 //! disk cache lets restored tabs and bookmarks show their icon right away. Icons travel to the
 //! UI as `data:` URLs, so a page can never be made to load an arbitrary address through them.
 use std::collections::{HashMap, HashSet};
-use std::net::{IpAddr, ToSocketAddrs};
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::time::Duration;
+use ureq::unversioned::resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver};
+use ureq::unversioned::transport::{DefaultConnector, NextTimeout};
 
 const MAX_ICON_BYTES: usize = 64 * 1024;
 const MAX_HTML_BYTES: usize = 256 * 1024;
@@ -124,22 +126,35 @@ fn is_global(ip: IpAddr) -> bool {
     }
 }
 
-/// Icons are only fetched from public hosts, never from the user's own network.
-fn is_public(host: &str) -> bool {
-    match (host, 443).to_socket_addrs() {
-        Ok(addrs) => {
-            let addrs: Vec<_> = addrs.collect();
-            !addrs.is_empty() && addrs.iter().all(|a| is_global(a.ip()))
+/// Resolves like ureq's default resolver but keeps only public addresses. ureq asks it for every
+/// connection, redirects included, and connects to exactly what it returns, so the "is this
+/// public?" check and the connection can't disagree: no DNS rebinding, and a redirect can't lead
+/// into the user's own network.
+#[derive(Debug, Default)]
+struct PublicOnly(DefaultResolver);
+
+impl Resolver for PublicOnly {
+    fn resolve(
+        &self,
+        uri: &ureq::http::Uri,
+        config: &ureq::config::Config,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, ureq::Error> {
+        let all = self.0.resolve(uri, config, timeout)?;
+        let mut kept = self.empty();
+        for addr in all.iter().filter(|a| is_global(a.ip())) {
+            kept.push(*addr);
         }
-        Err(_) => false,
+        if kept.is_empty() { Err(ureq::Error::HostNotFound) } else { Ok(kept) }
     }
 }
 
+/// Agent that can only reach public hosts.
 fn agent() -> ureq::Agent {
-    ureq::Agent::config_builder()
+    let config = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(8)))
-        .build()
-        .into()
+        .build();
+    ureq::Agent::with_parts(config, DefaultConnector::default(), PublicOnly::default())
 }
 
 fn get(agent: &ureq::Agent, url: &str) -> Option<ureq::http::Response<ureq::Body>> {
@@ -176,8 +191,7 @@ pub fn fetch_icon(url: &str) -> Option<String> {
     if !matches!(parsed.scheme(), "http" | "https") {
         return None;
     }
-    let host = parsed.host_str()?.to_ascii_lowercase();
-    if !valid_host(&host) || !is_public(&host) {
+    if !valid_host(&parsed.host_str()?.to_ascii_lowercase()) {
         return None;
     }
     let bytes = get_bytes(&agent(), url, MAX_ICON_BYTES as u64)?;
@@ -186,7 +200,7 @@ pub fn fetch_icon(url: &str) -> Option<String> {
 
 /// Finds a site's icon: the page's own `<link rel=icon>`, then `/favicon.ico`.
 pub fn fetch_for_host(host: &str) -> Option<String> {
-    if !valid_host(host) || !is_public(host) {
+    if !valid_host(host) {
         return None;
     }
     let agent = agent();
@@ -365,6 +379,17 @@ mod tests {
         assert!(!is_global("fd00::1".parse().unwrap()));
         assert!(!is_global("::ffff:10.0.0.1".parse().unwrap()));
         assert!(is_global("2606:4700::1111".parse().unwrap()));
+    }
+
+    #[test]
+    fn test_agent_refuses_private_addresses() {
+        // IP literals need no DNS: the resolver must refuse them before any connection is made.
+        for url in ["http://127.0.0.1:9/", "http://10.0.0.1/", "http://192.168.1.1/", "http://[::1]/"] {
+            assert!(
+                matches!(agent().get(url).call(), Err(ureq::Error::HostNotFound)),
+                "{url} was not refused"
+            );
+        }
     }
 
     #[test]
