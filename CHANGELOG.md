@@ -5,6 +5,20 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.5.1] - 2026-11-14
+
+### ⚡ Muutokset (Changed)
+- **Puhtaampi aloitussivu**: laatikot ja reunaviivat on poistettu. Sisältö on suoraan taustakuvan päällä yhdellä vasemmalla reunalla: kello hallitsee, sää on sen vieressä, ja haku, pikalinkit ja pörssikurssit seuraavat pelkkänä tekstinä. Muokkaustila ja widgetit toimivat kuten ennen.
+- Aloitussivun tallennettu asettelu nollautuu kerran uuteen oletusjärjestykseen (kello, sää, haku, linkit, kurssit).
+
+### 🐛 Korjattu (Fixed)
+- Widgetin leveysvalinta näyttää nyt oikean arvon myös, kun leveys on 7/12.
+
+### 🧹 Siivous (Chore)
+- Poistettu vanhat käynnistysskriptit (`kaynnista.*`), käyttämätön logo ja vanhan nimen ympäristömuuttujat; README päivitetty.
+
+---
+
 ## [0.5.0] - 2026-11-14
 
 ### 🌟 Uutta (Added)
