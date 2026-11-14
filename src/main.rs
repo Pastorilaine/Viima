@@ -6,6 +6,7 @@ mod history_db;
 mod i18n;
 mod storage;
 mod tab;
+mod update_sig;
 mod updater;
 mod url_resolver;
 #[cfg(windows)]

@@ -49,7 +49,7 @@ impl BrowserApp {
             adblock_now,
             AdBlocker::cookie_banner_script(),
             settings.hide_cookie_banners,
-            SHORTCUT_SCRIPT,
+            FAVICON_SCRIPT,
             FIND_SCRIPT
         );
 

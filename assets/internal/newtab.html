@@ -803,36 +803,43 @@
                 </div>`;
             }
 
-            const initial = (title || domain || '★').trim().charAt(0).toUpperCase();
-            const colorIdx = hashString(domain || title) % BRAND_COLORS.length;
-            const bgGrad = BRAND_COLORS[colorIdx];
-            return `<div class="shortcut-icon-box" style="background: ${bgGrad}; font-weight: 800; font-size: 20px; color: #ffffff;">
-                ${initial}
-            </div>`;
+            return null; // letter tile, built with the DOM in shortcutCard
+        }
+
+        function el(tag, className, text) {
+            const node = document.createElement(tag);
+            node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        }
+
+        // Built with DOM APIs: bookmark titles and URLs come from web pages.
+        function shortcutCard(item) {
+            const url = item.url || '';
+            const domain = getDomain(url);
+            const titleStr = (item.title || domain || 'Sivu').trim();
+            const card = el('a', 'shortcut-card');
+            // Web addresses only: never a javascript: link on this privileged page.
+            if (/^https?:\/\//i.test(url)) card.href = url;
+            card.title = `${titleStr} • ${url}`;
+            const brandIcon = getIconHtml(url, item.title);
+            if (brandIcon) {
+                card.insertAdjacentHTML('beforeend', brandIcon); // constant SVG markup
+            } else {
+                const box = el('div', 'shortcut-icon-box', (item.title || domain || '★').trim().charAt(0).toUpperCase());
+                box.style.cssText = `background: ${BRAND_COLORS[hashString(domain || item.title || '') % BRAND_COLORS.length]}; font-weight: 800; font-size: 20px; color: #ffffff;`;
+                card.appendChild(box);
+            }
+            const text = el('div', 'shortcut-text');
+            text.append(el('div', 'shortcut-title', titleStr), el('div', 'shortcut-desc', domain));
+            card.appendChild(text);
+            return card;
         }
 
         function renderShortcuts(bookmarksList) {
             const hasBookmarks = Array.isArray(bookmarksList) && bookmarksList.length > 0;
             const items = hasBookmarks ? bookmarksList.slice(0, 8) : DEFAULT_SHORTCUTS;
-
-            shortcutsGridEl.innerHTML = items.map(item => {
-                const domain = getDomain(item.url);
-                const titleStr = (item.title || domain || 'Sivu').trim();
-                const safeTitle = titleStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                const safeUrl = (item.url || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                const safeDomain = domain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const iconHtml = getIconHtml(item.url, item.title);
-
-                return `
-                    <a class="shortcut-card" href="${safeUrl}" title="${safeTitle} • ${safeUrl}">
-                        ${iconHtml}
-                        <div class="shortcut-text">
-                            <div class="shortcut-title">${safeTitle}</div>
-                            <div class="shortcut-desc">${safeDomain}</div>
-                        </div>
-                    </a>
-                `;
-            }).join('');
+            shortcutsGridEl.replaceChildren(...items.map(shortcutCard));
         }
 
         function notifyParent(action, payload = {}) {

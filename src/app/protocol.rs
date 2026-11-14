@@ -55,12 +55,33 @@ fn asset(host: &str, path: &str) -> Option<(&'static str, &'static [u8])> {
     })
 }
 
+/// Per-response CSP nonce. `RandomState` is keyed from OS randomness, so it can't be guessed.
+fn nonce() -> String {
+    use std::hash::{BuildHasher, RandomState};
+    use std::sync::atomic::AtomicU64;
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("{:016x}{:016x}", RandomState::new().hash_one(n), RandomState::new().hash_one(!n))
+}
+
+/// Internal pages hold privileged IPC, so script is limited to our own files and the page's
+/// own (nonce-tagged) inline script: injected markup or a javascript: link can't run, and
+/// nothing can be sent anywhere but the page itself. Images may come from anywhere (favicons).
+fn content_security_policy(nonce: &str) -> String {
+    format!(
+        "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; \
+         img-src * data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; \
+         form-action 'none'; frame-ancestors 'none'"
+    )
+}
+
 pub fn handle_protocol(_id: &str, req: Request<Vec<u8>>) -> Response<Cow<'static, [u8]>> {
     let uri = req.uri();
     let (content_type, raw_bytes) = asset(uri.host().unwrap_or(""), uri.path()).unwrap_or((
         "text/html; charset=utf-8",
         b"<!DOCTYPE html><html><body><h1>404</h1></body></html>",
     ));
+    let nonce = nonce();
 
     let body: Cow<'static, [u8]> = if content_type.starts_with("text/html") {
         let html = std::str::from_utf8(raw_bytes).unwrap_or("");
@@ -77,7 +98,8 @@ pub fn handle_protocol(_id: &str, req: Request<Vec<u8>>) -> Response<Cow<'static
         );
         let themed = html
             .replacen("<html lang=\"fi\">", &attr, 1)
-            .replace("{{VERSION}}", updater::CURRENT_VERSION);
+            .replace("{{VERSION}}", updater::CURRENT_VERSION)
+            .replace("<script>", &format!("<script nonce=\"{nonce}\">"));
         Cow::Owned(themed.into_bytes())
     } else {
         Cow::Borrowed(raw_bytes)
@@ -87,7 +109,7 @@ pub fn handle_protocol(_id: &str, req: Request<Vec<u8>>) -> Response<Cow<'static
     let mut builder = Response::builder()
         .header("Content-Type", content_type)
         .header("X-Frame-Options", "DENY")
-        .header("Content-Security-Policy", "frame-ancestors 'none'")
+        .header("Content-Security-Policy", content_security_policy(&nonce))
         .header("X-Content-Type-Options", "nosniff");
     if content_type.starts_with("text/html") || content_type.starts_with("application/javascript")
     {
@@ -110,5 +132,20 @@ mod tests {
         }
         assert!(asset("browser.settings", "/i18n.js").is_some());
         assert!(asset("browser.evil", "/").is_none());
+    }
+
+    #[test]
+    fn test_inline_scripts_get_the_csp_nonce() {
+        let req = |url: &str| Request::builder().uri(url).body(Vec::new()).unwrap();
+        let res = handle_protocol("", req("http://browser.settings/"));
+        let csp = res.headers()["Content-Security-Policy"].to_str().unwrap().to_string();
+        let nonce = csp.split("'nonce-").nth(1).unwrap().split('\'').next().unwrap();
+        assert_eq!(nonce.len(), 32);
+        let html = std::str::from_utf8(res.body()).unwrap();
+        assert!(!html.contains("<script>"), "every inline script must carry the nonce");
+        assert!(html.contains(&format!("<script nonce=\"{nonce}\">")));
+        // Fresh nonce per response.
+        let again = handle_protocol("", req("http://browser.settings/"));
+        assert_ne!(again.headers()["Content-Security-Policy"], res.headers()["Content-Security-Policy"]);
     }
 }

@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use tao::event_loop::EventLoopProxy;
 use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use webview2_com::{
-    BytesReceivedChangedEventHandler, CallDevToolsProtocolMethodCompletedHandler,
+    AcceleratorKeyPressedEventHandler, BytesReceivedChangedEventHandler, CallDevToolsProtocolMethodCompletedHandler,
     DownloadStartingEventHandler, IsDocumentPlayingAudioChangedEventHandler,
     NavigationCompletedEventHandler, StateChangedEventHandler, ZoomFactorChangedEventHandler,
     take_pwstr,
@@ -94,6 +94,38 @@ pub fn install(
                 &mut token,
             )?;
         }
+
+        // Browser shortcuts (Ctrl+T, Ctrl+W, Ctrl+Tab...): real key presses only.
+        let p = proxy.clone();
+        controller.add_AcceleratorKeyPressed(
+            &AcceleratorKeyPressedEventHandler::create(Box::new(move |_, args| {
+                use windows::Win32::UI::Input::KeyboardAndMouse::{
+                    GetKeyState, VK_CONTROL, VK_MENU, VK_SHIFT,
+                };
+                let Some(args) = args else { return Ok(()) };
+                let mut kind = COREWEBVIEW2_KEY_EVENT_KIND::default();
+                args.KeyEventKind(&mut kind)?;
+                if kind != COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN {
+                    return Ok(());
+                }
+                let mut vk = 0u32;
+                args.VirtualKey(&mut vk)?;
+                let down = |k: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY| {
+                    GetKeyState(k.0 as i32) < 0
+                };
+                if let Some(event) = crate::app::ipc::shortcut_for_key(
+                    vk,
+                    down(VK_CONTROL),
+                    down(VK_SHIFT),
+                    down(VK_MENU),
+                ) {
+                    args.SetHandled(true)?;
+                    let _ = p.send_event(event);
+                }
+                Ok(())
+            })),
+            &mut token,
+        )?;
 
         // Zoom (Ctrl +/-/0, Ctrl+wheel are handled natively; we only remember the level)
         let p = proxy.clone();

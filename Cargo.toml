@@ -1,6 +1,6 @@
 [package]
 name = "viima"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2024"
 default-run = "viima"
 build = "build.rs"
@@ -13,9 +13,14 @@ path = "src/main.rs"
 name = "viima_setup"
 path = "src/bin/setup.rs"
 
+[[bin]]
+name = "viima_sign"
+path = "src/bin/sign.rs"
+
 [dependencies]
 directories = "6.0.0"
-rusqlite = { version = "0.32", features = ["bundled"] }
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+rusqlite = { version = "0.42", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.10.9"

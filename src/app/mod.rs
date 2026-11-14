@@ -1,5 +1,5 @@
 mod features;
-mod ipc;
+pub(crate) mod ipc;
 mod protocol;
 mod tabs;
 
@@ -35,7 +35,7 @@ const BOOKMARKS_BAR_HEIGHT: f64 = 30.0;
 // All webviews sharing a profile must use identical args.
 const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI";
 
-const SHORTCUT_SCRIPT: &str = include_str!("../../assets/inject/shortcuts.js");
+const FAVICON_SCRIPT: &str = include_str!("../../assets/inject/favicon.js");
 const FIND_SCRIPT: &str = include_str!("../../assets/inject/find.js");
 
 // Read by the protocol handler (a plain fn) to stamp data-theme into served pages, so there is
@@ -1020,14 +1020,20 @@ impl BrowserApp {
         false
     }
 
-    fn state_script(json: &str) -> String {
-        format!("if (window.onBrowserStateUpdate) {{ window.onBrowserStateUpdate({json}); }}")
+    /// `page` = the internal page name the data is meant for. The origin is checked inside the
+    /// page when the script runs: our cached tab URL can lag a navigation, and history or
+    /// bookmarks must never reach a web page that just loaded in that tab.
+    fn state_script(page: &str, json: &str) -> String {
+        format!(
+            "if (location.origin === 'http://browser.{page}' && window.onBrowserStateUpdate) {{ window.onBrowserStateUpdate({json}); }}"
+        )
     }
 
-    fn internal_state_script(state: &InternalPageState<'_>) -> Option<String> {
+    fn internal_state_script(kind: InternalPage, state: &InternalPageState<'_>) -> Option<String> {
+        let page = kind.browser_url().strip_prefix("browser://")?;
         serde_json::to_string(state)
             .ok()
-            .map(|json| Self::state_script(&json))
+            .map(|json| Self::state_script(page, &json))
     }
 
     fn push_to_pages(&self, kind: InternalPage, state: &InternalPageState<'_>) {
@@ -1038,7 +1044,7 @@ impl BrowserApp {
         {
             return;
         }
-        if let Some(script) = Self::internal_state_script(state) {
+        if let Some(script) = Self::internal_state_script(kind, state) {
             for tab in &self.tabs {
                 if InternalPage::from_url(&tab.url) == Some(kind) {
                     tab.run_script(&script);
@@ -1141,7 +1147,7 @@ impl BrowserApp {
             private: self.private,
         };
         if let Ok(json) = serde_json::to_string(&state) {
-            let _ = self.ui_webview.evaluate_script(&Self::state_script(&json));
+            let _ = self.ui_webview.evaluate_script(&Self::state_script("ui", &json));
         }
 
         if !full {

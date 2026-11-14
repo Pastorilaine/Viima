@@ -109,10 +109,18 @@ VAATIMUKSET:
     Write-Host "[5/5] Luodaan latest.json ja peilataan releases\latest\..." -ForegroundColor Yellow
     $Sha256 = (Get-FileHash -Path $VerBrowserExe -Algorithm SHA256).Hash.ToLowerInvariant()
 
+    # Viima 0.4.3+ installs only updates signed with the release key (secret VIIMA_SIGNING_KEY).
+    if ([string]::IsNullOrWhiteSpace($env:VIIMA_SIGNING_KEY)) {
+        throw "VIIMA_SIGNING_KEY puuttuu: allekirjoittamatonta p${LowerAe}ivityst${LowerAe} selaimet eiv${LowerAe}t asenna."
+    }
+    $Signature = (cargo run --quiet --release --bin viima_sign -- $VerBrowserExe $Version)
+    if ($LASTEXITCODE -ne 0 -or $Signature -notmatch '^[0-9a-f]{128}$') { throw "P${LowerAe}ivityksen allekirjoitus ep${LowerAe}onnistui." }
+
     $ManifestObj = [ordered]@{
         version       = $Version
         download_url  = "$DownloadBaseUrl/Viima.exe"
         sha256        = $Sha256
+        signature     = $Signature
         release_notes = $ReleaseNotes
     }
     $ManifestJson = $ManifestObj | ConvertTo-Json -Depth 4

@@ -43,11 +43,37 @@ fn shortcut(key: &str) -> Option<AppEvent> {
     })
 }
 
-/// Untrusted (web page) senders may only send shortcuts and their favicon.
+/// Browser shortcut for a real key press inside a tab (WebView2 accelerator key event).
+/// Done natively, not via page JS: a page could otherwise post shortcuts in a loop
+/// (endless private windows, closing the tab the user is looking at...).
+pub fn shortcut_for_key(vk: u32, ctrl: bool, shift: bool, alt: bool) -> Option<AppEvent> {
+    // Ctrl+Alt is AltGr on Finnish keyboards (@, {, [ ...): never a shortcut.
+    if !ctrl || alt {
+        return None;
+    }
+    let key = match (u8::try_from(vk).ok()?, shift) {
+        (0x09, true) => "prev_tab", // VK_TAB
+        (0x09, false) => "next_tab",
+        (b'T', true) => "reopen_tab",
+        (b'N', true) => "private_window",
+        (b'B', true) => "bookmarks_bar",
+        (d @ b'1'..=b'9', false) => return shortcut(&format!("tab_{}", d as char)),
+        (b'T', false) => "new_tab",
+        (b'W', false) => "close_tab",
+        (b'L', false) => "focus_omnibox",
+        (b'H', false) => "history",
+        (b'J', false) => "downloads",
+        (b'D', false) => "bookmark",
+        _ => return None,
+    };
+    shortcut(key)
+}
+
+/// Untrusted (web page) senders may only report their favicon.
 pub fn parse(body: &str, trusted: bool, tab_id: Option<usize>) -> Option<AppEvent> {
     let v: Value = serde_json::from_str(body).ok()?;
     let action = v.get("action")?.as_str()?;
-    if !trusted && !matches!(action, "shortcut" | "favicon") {
+    if !trusted && action != "favicon" {
         return None;
     }
     Some(match action {
@@ -144,8 +170,11 @@ mod tests {
     fn test_untrusted_pages_are_limited() {
         assert!(parse(r#"{"action":"clear_history"}"#, false, Some(1)).is_none());
         assert!(parse(r#"{"action":"set_default_browser"}"#, false, Some(1)).is_none());
+        // Pages can't drive the browser with fake shortcuts; real keys come natively.
+        assert!(parse(r#"{"action":"shortcut","key":"private_window"}"#, false, Some(1)).is_none());
+        assert!(parse(r#"{"action":"shortcut","key":"close_tab"}"#, false, Some(1)).is_none());
         assert!(matches!(
-            parse(r#"{"action":"shortcut","key":"tab_9"}"#, false, Some(1)),
+            parse(r#"{"action":"shortcut","key":"tab_9"}"#, true, None),
             Some(AppEvent::IpcSelectTab(usize::MAX))
         ));
         assert!(parse(r#"{"action":"favicon","url":"javascript:x"}"#, false, Some(1)).is_none());
@@ -153,5 +182,19 @@ mod tests {
             parse(r#"{"action":"zoom","dir":-3}"#, true, None),
             Some(AppEvent::IpcZoom(-1))
         ));
+    }
+
+    #[test]
+    fn test_shortcut_for_key() {
+        let k = |vk: u8, shift| shortcut_for_key(vk as u32, true, shift, false);
+        assert!(matches!(k(b'T', false), Some(AppEvent::IpcNewTab(None))));
+        assert!(matches!(k(b'T', true), Some(AppEvent::IpcReopenTab)));
+        assert!(matches!(k(0x09, true), Some(AppEvent::IpcCycleTab(false))));
+        assert!(matches!(k(b'3', false), Some(AppEvent::IpcSelectTab(2))));
+        assert!(matches!(k(b'9', false), Some(AppEvent::IpcSelectTab(usize::MAX))));
+        assert!(k(b'X', false).is_none());
+        // no Ctrl, or AltGr (Ctrl+Alt)
+        assert!(shortcut_for_key(b'T' as u32, false, false, false).is_none());
+        assert!(shortcut_for_key(b'2' as u32, true, false, true).is_none());
     }
 }

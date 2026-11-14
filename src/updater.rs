@@ -13,14 +13,35 @@ pub fn default_update_url() -> &'static str {
         .unwrap_or("https://github.com/Pastorilaine/Viima/releases/latest/download/latest.json")
 }
 
+/// Public half of the release signing key. The private half is the GitHub Actions secret
+/// VIIMA_SIGNING_KEY; `viima_sign` signs each release with it in CI.
+const UPDATE_PUBLIC_KEY: &str = "1779981856e3f01e21dc198fe5af68331c6429ada935e46ef89204d314f9e313";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateInfo {
     pub version: String,
     pub download_url: String,
     #[serde(default)]
     pub sha256: Option<String>,
+    /// ed25519 signature (hex) over `update_sig::signed_message(version, sha256)`.
+    #[serde(default)]
+    pub signature: Option<String>,
     #[serde(default)]
     pub release_notes: Option<String>,
+}
+
+/// An update is only accepted if our release key signed its version and SHA-256. HTTPS alone
+/// would trust whoever controls the update URL (a setting) or the GitHub release.
+fn verify_signature(info: &UpdateInfo, public_key_hex: &str) -> Result<(), String> {
+    use crate::update_sig::{from_hex, signed_message};
+    use ed25519_dalek::{Signature, VerifyingKey};
+    let invalid = || "Päivityksen allekirjoitus puuttuu tai ei kelpaa.".to_string();
+    let sha256 = info.sha256.as_deref().ok_or_else(invalid)?;
+    let signature = Signature::from_bytes(&from_hex::<64>(info.signature.as_deref().ok_or_else(invalid)?).ok_or_else(invalid)?);
+    let key = VerifyingKey::from_bytes(&from_hex::<32>(public_key_hex).ok_or_else(invalid)?)
+        .map_err(|_| invalid())?;
+    key.verify_strict(&signed_message(&info.version, sha256), &signature)
+        .map_err(|_| invalid())
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,63 +92,22 @@ pub fn is_newer_version(latest: &str, current: &str) -> bool {
     }
 }
 
-#[derive(Deserialize)]
-struct GithubAsset {
-    name: String,
-    browser_download_url: String,
-    #[serde(default)]
-    digest: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct GithubRelease {
-    tag_name: String,
-    #[serde(default)]
-    body: Option<String>,
-    #[serde(default)]
-    assets: Vec<GithubAsset>,
-}
-
+/// Reads a signed `latest.json`. (The GitHub releases API format is no longer accepted: it
+/// carries no signature.)
 pub fn parse_manifest(body: &str) -> Result<UpdateInfo, String> {
-    if let Ok(info) = serde_json::from_str::<UpdateInfo>(body)
-        && !info.version.trim().is_empty()
-        && !info.download_url.trim().is_empty()
-    {
-        if !info.download_url.starts_with("https://") {
-            return Err("Päivityksen latausosoitteen täytyy käyttää HTTPS-yhteyttä.".into());
-        }
-        return Ok(info);
+    parse_manifest_with_key(body, UPDATE_PUBLIC_KEY)
+}
+
+fn parse_manifest_with_key(body: &str, public_key_hex: &str) -> Result<UpdateInfo, String> {
+    let info = serde_json::from_str::<UpdateInfo>(body)
+        .ok()
+        .filter(|i| !i.version.trim().is_empty() && !i.download_url.trim().is_empty())
+        .ok_or("Tuntematon päivitystiedoston muoto.")?;
+    if !info.download_url.starts_with("https://") {
+        return Err("Päivityksen latausosoitteen täytyy käyttää HTTPS-yhteyttä.".into());
     }
-
-    if let Ok(release) = serde_json::from_str::<GithubRelease>(body) {
-        let asset = release
-            .assets
-            .iter()
-            .find(|a| {
-                let lower = a.name.to_ascii_lowercase();
-                lower.ends_with(".exe") && !lower.contains("setup")
-            })
-            .ok_or_else(|| "GitHub-julkaisusta ei löytynyt Viima.exe-tiedostoa.".to_string())?;
-
-        if !asset.browser_download_url.starts_with("https://") {
-            return Err("Päivitystiedoston osoite ei ole HTTPS.".into());
-        }
-
-        let sha256 = asset
-            .digest
-            .as_deref()
-            .and_then(|d| d.strip_prefix("sha256:"))
-            .map(|s| s.to_string());
-
-        return Ok(UpdateInfo {
-            version: release.tag_name,
-            download_url: asset.browser_download_url.clone(),
-            sha256,
-            release_notes: release.body,
-        });
-    }
-
-    Err("Tuntematon päivitystiedoston muoto.".into())
+    verify_signature(&info, public_key_hex)?;
+    Ok(info)
 }
 
 fn http_agent() -> ureq::Agent {
@@ -177,6 +157,7 @@ pub fn download_and_stage_update(info: &UpdateInfo) -> Result<PathBuf, String> {
     if !info.download_url.starts_with("https://") {
         return Err("Vain HTTPS-lataukset on sallittu.".into());
     }
+    verify_signature(info, UPDATE_PUBLIC_KEY)?;
 
     let dir = updates_dir();
     fs::create_dir_all(&dir).map_err(|e| format!("Päivityskansion luonti epäonnistui: {e}"))?;
@@ -240,15 +221,11 @@ pub fn download_and_stage_update(info: &UpdateInfo) -> Result<PathBuf, String> {
         return Err("Ladattu tiedosto ei ole kelvollinen Windows-ohjelma.".into());
     }
 
-    if let Some(expected) = info.sha256.as_deref() {
-        let expected_norm = expected.trim().to_ascii_lowercase();
-        if !expected_norm.is_empty() {
-            let actual = format!("{:x}", hasher.finalize());
-            if actual != expected_norm {
-                let _ = fs::remove_file(&part_path);
-                return Err("Päivityksen SHA-256-eheystarkistus epäonnistui.".into());
-            }
-        }
+    // The signature (checked in parse_manifest) covers this hash, so it is mandatory.
+    let expected = info.sha256.as_deref().unwrap_or("").trim().to_ascii_lowercase();
+    if expected.is_empty() || format!("{:x}", hasher.finalize()) != expected {
+        let _ = fs::remove_file(&part_path);
+        return Err("Päivityksen SHA-256-eheystarkistus epäonnistui.".into());
     }
 
     let _ = fs::remove_file(&staged_path);
@@ -457,48 +434,44 @@ mod tests {
         assert!(!is_newer_version("v0.2.9", "0.3.0"));
     }
 
-    #[test]
-    fn test_parse_latest_json_manifest() {
-        let json = r#"{
-            "version": "0.3.1",
-            "download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima.exe",
-            "sha256": "deadbeef",
-            "release_notes": "Bugikorjauksia"
-        }"#;
-        let info = parse_manifest(json).unwrap();
-        assert_eq!(info.version, "0.3.1");
-        assert_eq!(info.sha256.as_deref(), Some("deadbeef"));
+    use crate::update_sig::{signed_message, to_hex};
+    use ed25519_dalek::{Signer, SigningKey};
+
+    const SHA: &str = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d";
+
+    fn manifest(key: &SigningKey, signed_version: &str, version: &str) -> String {
+        let sig = to_hex(&key.sign(&signed_message(signed_version, SHA)).to_bytes());
+        format!(
+            r#"{{"version":"{version}","download_url":"https://github.com/Pastorilaine/Viima/releases/download/v{version}/Viima.exe","sha256":"{SHA}","signature":"{sig}"}}"#
+        )
     }
 
     #[test]
-    fn test_parse_github_release_api() {
-        let json = r#"{
-            "tag_name": "v0.3.1",
-            "body": "Uusi julkaisu",
-            "assets": [
-                {
-                    "name": "Viima-Setup.exe",
-                    "browser_download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima-Setup.exe"
-                },
-                {
-                    "name": "Viima.exe",
-                    "browser_download_url": "https://github.com/Pastorilaine/Viima/releases/download/v0.3.1/Viima.exe",
-                    "digest": "sha256:abcdef1234"
-                }
-            ]
-        }"#;
-        let info = parse_manifest(json).unwrap();
-        assert_eq!(info.version, "v0.3.1");
-        assert!(info.download_url.ends_with("/Viima.exe"));
-        assert_eq!(info.sha256.as_deref(), Some("abcdef1234"));
+    fn test_signed_manifest_is_required() {
+        let key = SigningKey::from_bytes(&[7u8; 32]);
+        let public = to_hex(key.verifying_key().as_bytes());
+        let info = parse_manifest_with_key(&manifest(&key, "0.5.0", "0.5.0"), &public).unwrap();
+        assert_eq!(info.version, "0.5.0");
+
+        // Signed by another key, or an old signed build relabelled as a newer version.
+        let other = SigningKey::from_bytes(&[8u8; 32]);
+        assert!(parse_manifest_with_key(&manifest(&other, "0.5.0", "0.5.0"), &public).is_err());
+        assert!(parse_manifest_with_key(&manifest(&key, "0.4.0", "9.9.9"), &public).is_err());
+        // Unsigned (what every manifest before 0.4.3 looked like).
+        let unsigned = format!(
+            r#"{{"version":"0.5.0","download_url":"https://x.fi/Viima.exe","sha256":"{SHA}"}}"#
+        );
+        assert!(parse_manifest_with_key(&unsigned, &public).is_err());
+        // The real key rejects test signatures.
+        assert!(parse_manifest(&manifest(&key, "0.5.0", "0.5.0")).is_err());
+        assert!(crate::update_sig::from_hex::<32>(UPDATE_PUBLIC_KEY).is_some());
     }
 
     #[test]
     fn test_rejects_insecure_http_download() {
-        let json = r#"{
-            "version": "0.3.1",
-            "download_url": "http://evil.com/Viima.exe"
-        }"#;
-        assert!(parse_manifest(json).is_err());
+        let key = SigningKey::from_bytes(&[7u8; 32]);
+        let public = to_hex(key.verifying_key().as_bytes());
+        let json = manifest(&key, "0.5.0", "0.5.0").replace("https://github.com", "http://evil.com");
+        assert!(parse_manifest_with_key(&json, &public).is_err());
     }
 }

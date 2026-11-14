@@ -146,6 +146,23 @@ pub struct BrowserSettings {
     pub adblock_rule_count: usize,
     /// Sites (see `site_key`) where ad blocking is turned off.
     pub adblock_allowlist: Vec<String>,
+    /// Missing in files written before 0.4.3 (= 0); see `migrate`.
+    #[serde(default)]
+    pub settings_version: u32,
+}
+
+const SETTINGS_VERSION: u32 = 1;
+
+impl BrowserSettings {
+    /// One-time fixes for settings files written by older versions.
+    fn migrate(&mut self) {
+        if self.settings_version < 1 {
+            // DevTools used to be on by default: a scammer could talk a user into pasting
+            // code into the console of a privileged internal page. Off unless re-enabled.
+            self.devtools_enabled = false;
+        }
+        self.settings_version = SETTINGS_VERSION;
+    }
 }
 
 impl Default for BrowserSettings {
@@ -161,12 +178,13 @@ impl Default for BrowserSettings {
             show_bookmarks_bar: false,
             https_only: false,
             hide_cookie_banners: true,
-            devtools_enabled: true,
+            devtools_enabled: false,
             sleeping_tabs: true,
             adblock_lists: true,
             adblock_lists_updated: 0,
             adblock_rule_count: 0,
             adblock_allowlist: Vec::new(),
+            settings_version: SETTINGS_VERSION,
         }
     }
 }
@@ -376,6 +394,7 @@ impl StorageManager {
         if !matches!(data.settings.language.as_str(), "fi" | "en") {
             data.settings.language = "fi".to_string();
         }
+        data.settings.migrate();
         // A download can't survive a restart: anything still running was interrupted.
         for d in &mut data.downloads {
             if d.state == "in_progress" {
@@ -812,6 +831,22 @@ mod tests {
         assert!(!json.contains("\"history\""), "empty legacy history is not written");
         let back: BrowserData = serde_json::from_str(&json).unwrap();
         assert_eq!(back.session, data.session);
+    }
+
+    #[test]
+    fn test_settings_migration_turns_devtools_off_once() {
+        let mut old: BrowserSettings =
+            serde_json::from_str(r#"{"devtools_enabled":true}"#).unwrap();
+        assert_eq!(old.settings_version, 0);
+        old.migrate();
+        assert!(!old.devtools_enabled);
+        // Re-enabled by the user after migrating: stays on.
+        old.devtools_enabled = true;
+        let mut again: BrowserSettings =
+            serde_json::from_str(&serde_json::to_string(&old).unwrap()).unwrap();
+        again.migrate();
+        assert!(again.devtools_enabled);
+        assert!(!BrowserSettings::default().devtools_enabled);
     }
 
     #[test]

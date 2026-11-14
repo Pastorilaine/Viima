@@ -5,6 +5,19 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.4.3] - 2026-11-14
+
+### 🔒 Tietoturva (Security)
+- **Allekirjoitetut päivitykset**: Viima asentaa vain päivitykset, jotka on allekirjoitettu julkaisuavaimella (ed25519). Allekirjoitus kattaa myös versionumeron, joten vanhaa versiota ei voi syöttää uutena.
+- **Pikanäppäimet** luetaan suoraan näppäimistöltä: verkkosivu ei voi enää avata loputtomasti ikkunoita tai sulkea välilehtiä lähettämällä keksittyjä pikanäppäimiä.
+- **Sisäsivujen suojaus (CSP)**: sisäsivuilla voi suorittaa vain Viiman omaa koodia.
+- Historia ja kirjanmerkit lähetetään vain oikeille sisäsivuille.
+- Kehittäjätyökalut (F12) ovat oletuksena pois päältä; ne voi kytkeä asetuksista.
+- SQLite päivitetty (RUSTSEC-2026-0459).
+- Julkaisuputken GitHub Actions -toiminnot lukittu tiettyihin versioihin ja riippuvuudet tarkistetaan jokaisessa julkaisussa.
+
+---
+
 ## [0.4.2] - 2026-11-14
 
 ### ⚡ Muutokset (Changed)
