@@ -78,7 +78,10 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                 </span>
-                <input type="text" class="omnibox-input" id="omniboxInput" placeholder="Kirjoita verkko-osoite tai hae netistä..." data-i18n-placeholder="ui.omnibox" spellcheck="false" autocomplete="off">
+                <div class="omnibox-field">
+                    <input type="text" class="omnibox-input" id="omniboxInput" placeholder="Kirjoita verkko-osoite tai hae netistä..." data-i18n-placeholder="ui.omnibox" spellcheck="false" autocomplete="off">
+                    <div class="omnibox-pretty" id="omniboxPretty" aria-hidden="true"></div>
+                </div>
                 <button class="zoom-badge hidden" id="zoomBadge" title="Palauta zoomaus 100 %:iin (Ctrl+0)" data-i18n-title="ui.zoom_reset">100%</button>
                 <button class="omnibox-action-btn" id="btnStarBookmark" title="Lisää kirjanmerkkeihin (Ctrl+D)" data-i18n-title="ui.bookmark_add">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -114,7 +117,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
-                <span id="adblockText">Suojattu</span>
+                <span id="adblockText"></span>
             </button>
 
             <!-- Theme toggle -->

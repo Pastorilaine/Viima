@@ -66,6 +66,8 @@ const btnReloadEl = document.getElementById('btnReload');
 const btnHomeEl = document.getElementById('btnHome');
 const omniboxInputEl = document.getElementById('omniboxInput');
 const omniboxIconEl = document.getElementById('omniboxIcon');
+const omniboxWrapperEl = document.querySelector('.omnibox-wrapper');
+const omniboxPrettyEl = document.getElementById('omniboxPretty');
 const zoomBadgeEl = document.getElementById('zoomBadge');
 const btnStarBookmarkEl = document.getElementById('btnStarBookmark');
 const btnUpdateAppEl = document.getElementById('btnUpdateApp');
@@ -92,6 +94,41 @@ let lastIconKind = '';
 let lastBookmarked = null;
 let lastDismissedError = '';
 let lastBarKey = '';
+let prettySource = null;
+
+// Draw the URL with its real host emphasised (scheme/path dimmed, "https://" dropped), so
+// tricks like https://bank.fi@evil.example or long subdomain chains stand out.
+// Built with textContent only: the URL is page-controlled.
+function renderPrettyUrl(displayUrl) {
+    if (displayUrl !== prettySource) {
+        prettySource = displayUrl;
+        omniboxPrettyEl.replaceChildren();
+        let u = null;
+        try { u = new URL(displayUrl); } catch {}
+        if (u && (u.protocol === 'https:' || u.protocol === 'http:') && u.host) {
+            const part = (text, cls) => {
+                if (!text) return;
+                const span = document.createElement('span');
+                if (cls) span.className = cls;
+                span.textContent = text;
+                omniboxPrettyEl.appendChild(span);
+            };
+            part(u.protocol === 'http:' ? 'http://' : '');
+            part(u.username ? `${u.username}${u.password ? ':' + u.password : ''}@` : '');
+            part(u.host, 'host');
+            const rest = u.pathname + u.search + u.hash;
+            part(rest === '/' ? '' : rest);
+        } else {
+            prettySource = null;
+        }
+    }
+    syncPrettyUrl();
+}
+
+// Only overlay while the input still holds exactly the URL the overlay was built from.
+function syncPrettyUrl() {
+    omniboxWrapperEl.classList.toggle('pretty', prettySource !== null && omniboxInputEl.value === prettySource);
+}
 
 function newTabTitle() {
     return tr('ui.new_tab', 'Uusi välilehti');
@@ -317,6 +354,8 @@ function renderActiveTab() {
             omniboxInputEl.value = displayUrl;
         }
     }
+    renderPrettyUrl(displayUrl);
+    document.documentElement.toggleAttribute('data-loading', Boolean(activeTab.is_loading));
 
     // Omnibox Security / Type SVG Icon (only update DOM when icon state changes)
     let iconKind = 'search';
@@ -479,9 +518,7 @@ window.onBrowserStateUpdate = function(state) {
     if (state.settings && state.settings.adblock_enabled) {
         btnAdblockEl.classList.add('shield-active');
         const blocked = active && active.blocked ? active.blocked : 0;
-        if (adblockTextEl) adblockTextEl.textContent = blocked
-            ? `${tr('ui.protected', 'Suojattu')} · ${blocked}`
-            : tr('ui.protected', 'Suojattu');
+        if (adblockTextEl) adblockTextEl.textContent = blocked ? (blocked > 99 ? '99+' : String(blocked)) : '';
         btnAdblockEl.title = (blocked
             ? tr('ui.blocked_n', '{n} mainos- tai seurantapyyntöä estetty tällä sivulla', { n: blocked })
             : tr('ui.adblock_on', 'Mainosesto päällä')) + ' — ' + tr('ui.shield_click', 'napsauta: sivustokohtaiset asetukset');
@@ -582,6 +619,7 @@ omniboxInputEl.addEventListener('keydown', (e) => {
 // Inline autocomplete from history/bookmarks: Rust answers via window.onAutocomplete.
 // Only on insertions with the caret at the end, so Backspace/Delete never fight the user.
 omniboxInputEl.addEventListener('input', (e) => {
+    syncPrettyUrl();
     if (e.inputType && !e.inputType.startsWith('insert')) return;
     const value = omniboxInputEl.value;
     if (omniboxInputEl.selectionStart !== value.length) return;

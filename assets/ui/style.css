@@ -75,7 +75,7 @@
 body {
     background-color: var(--bg-chrome);
     color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     font-size: 13px;
     line-height: 1.4;
     overflow: hidden;
@@ -168,24 +168,47 @@ body {
     max-width: 200px;
     flex: 1 0 110px;
     padding: 0 10px;
-    background-color: var(--bg-tab);
+    background-color: transparent;
+    color: var(--text-secondary);
     border-radius: 8px 8px 0 0;
-    border: 1px solid var(--border-subtle);
-    border-bottom: none;
     cursor: pointer;
     position: relative;
     transition: background 0.15s ease, color 0.15s ease;
     gap: 8px;
 }
 
-.tab:hover {
-    background-color: var(--bg-tab-hover);
+/* Thin divider between inactive tabs; hidden next to the active or hovered tab. */
+.tab::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: 9px;
+    bottom: 9px;
+    width: 1px;
+    background: var(--border-subtle);
 }
 
-.tab.active {
-    background-color: var(--bg-tab-active);
+.tab:first-child::before,
+.tab.active::before,
+.tab:hover::before,
+.tab.active + .tab::before,
+.tab:hover + .tab::before {
+    display: none;
+}
+
+.tab:hover {
+    background-color: var(--hover-overlay);
     color: var(--text-primary);
-    border-top: 2px solid var(--accent);
+}
+
+/* Active tab shares the toolbar colour, so tab and toolbar read as one surface. */
+.tab.active {
+    background-color: var(--bg-chrome);
+    color: var(--text-primary);
+}
+
+.tab:not(.active):not(:hover) .tab-close {
+    visibility: hidden;
 }
 
 .tab-icon {
@@ -443,8 +466,20 @@ body {
     color: var(--shield-green);
 }
 
-.tool-btn.shield-active .shield-indicator {
-    background-color: var(--shield-green);
+#adblockText:empty {
+    display: none;
+}
+
+.tool-btn.shield-active #adblockText {
+    min-width: 18px;
+    padding: 1px 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: var(--bg-chrome);
+    background: var(--shield-green);
 }
 
 .tool-btn.update-ready {
@@ -472,170 +507,6 @@ body {
 html:not([data-theme="light"]) .icon-moon,
 html[data-theme="light"] .icon-sun {
     display: none;
-}
-
-.shield-indicator {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--text-muted);
-}
-
-/* ==================== DROPDOWNS & MODALS ==================== */
-.popover-menu {
-    position: fixed;
-    top: 84px;
-    right: 12px;
-    width: 340px;
-    max-height: 440px;
-    background: var(--bg-popup);
-    border: 1px solid var(--border-subtle);
-    border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    display: none;
-    flex-direction: column;
-    z-index: 1000;
-    overflow: hidden;
-}
-
-.popover-menu.open {
-    display: flex;
-    animation: fadeIn 0.12s ease-out;
-}
-
-.popover-header {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-subtle);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-weight: 600;
-    font-size: 13px;
-}
-
-.popover-body {
-    padding: 8px;
-    overflow-y: auto;
-    flex: 1;
-    max-height: 340px;
-}
-
-.popover-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s;
-    text-decoration: none;
-    color: var(--text-primary);
-    gap: 8px;
-}
-
-.popover-item:hover {
-    background-color: var(--bg-tab-hover);
-}
-
-.popover-item-info {
-    flex: 1;
-    overflow: hidden;
-}
-
-.popover-item-title {
-    font-weight: 500;
-    font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.popover-item-url {
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.popover-item-delete {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 4px;
-    border-radius: 4px;
-}
-
-.popover-item-delete:hover {
-    color: var(--danger);
-    background-color: rgba(239, 68, 68, 0.1);
-}
-
-.popover-footer {
-    padding: 10px 14px;
-    border-top: 1px solid var(--border-subtle);
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.btn-small {
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-tab);
-    color: var(--text-primary);
-    transition: background 0.15s;
-}
-
-.btn-small:hover {
-    background: var(--bg-tab-hover);
-}
-
-.btn-danger {
-    color: var(--danger);
-    border-color: rgba(239, 68, 68, 0.2);
-}
-
-.btn-danger:hover {
-    background: rgba(239, 68, 68, 0.15);
-}
-
-/* Settings Form */
-.settings-group {
-    margin-bottom: 12px;
-}
-
-.settings-label {
-    display: block;
-    font-size: 11px;
-    color: var(--text-secondary);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.settings-select {
-    width: 100%;
-    padding: 8px 10px;
-    background: var(--bg-tab);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 12px;
-    outline: none;
-}
-
-.settings-checkbox-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 0;
 }
 
 .storage-error {
@@ -686,12 +557,9 @@ html[data-private] .private-badge {
 }
 
 html[data-private] .tab-strip-container {
-    background: linear-gradient(90deg, #2e1065, #3b0764 60%, #1e1b4b);
+    background: #2e1065;
 }
 
-html[data-private] .tab.active {
-    border-top-color: #c084fc;
-}
 
 /* ==================== TAB STATES ==================== */
 .tab.pinned {
@@ -859,4 +727,81 @@ html[data-private] .tab.active {
     color: var(--text-muted);
     font-size: 12px;
     padding-left: 4px;
+}
+
+/* ==================== OMNIBOX: HIGHLIGHTED HOST ==================== */
+.omnibox-field {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.omnibox-field .omnibox-input {
+    width: 100%;
+    height: 100%;
+}
+
+/* Styled copy of the URL drawn over the (then transparent) input while it is not focused. */
+.omnibox-pretty {
+    display: none;
+    position: absolute;
+    inset: 0;
+    line-height: 32px;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.omnibox-pretty .host {
+    color: var(--text-primary);
+}
+
+.omnibox-wrapper.pretty:not(:focus-within) .omnibox-pretty {
+    display: block;
+}
+
+.omnibox-wrapper.pretty:not(:focus-within) .omnibox-input {
+    color: transparent;
+}
+
+/* ==================== PAGE LOADING LINE ==================== */
+html[data-loading] body::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 35% 100% no-repeat;
+    animation: loading-sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes loading-sweep {
+    from { background-position: -40% 0; }
+    to { background-position: 140% 0; }
+}
+
+/* ==================== KEYBOARD FOCUS ==================== */
+button:focus-visible,
+.tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+    html[data-loading] body::after {
+        background: var(--accent);
+        opacity: 0.6;
+    }
 }
