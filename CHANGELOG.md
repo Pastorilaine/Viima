@@ -5,6 +5,22 @@ Formaatti noudattaa [Keep a Changelog](https://keepachangelog.com/fi/1.1.0/) -oh
 
 ---
 
+## [0.5.0] - 2026-11-14
+
+### 🌟 Uutta (Added)
+- **Muokattava aloitussivu**: uusi välilehti käyttää koko ruudun, ja Viima-merkki on poistettu. Sivu koostuu widgeteistä: haku, kello, sää, pörssikurssit ja pikalinkit kirjanmerkeistä. "Muokkaa"-painikkeella widgettejä voi lisätä, poistaa, siirtää ja leventää. Asetukset tallentuvat selaimeen.
+- **Kellon ulkoasu**: digitaalinen tai analoginen, fontti, koko, väri, tasaus, 12/24 tuntia, sekunnit, päivämäärä ja tervehdys.
+- **Sää** (Open-Meteo, paikkakunnan haku) ja **pörssikurssit** (Yahoo Finance, omat tunnukset, esim. `NOKIA.HE`, `^OMXH25`, `BTC-EUR`). Tiedot haetaan Rust-puolella: aloitussivun tiukka suojaus ei muutu.
+
+### ⚡ Muutokset (Changed)
+- **Oikeat faviconit**: Viima hakee ja tallentaa sivustojen ikonit itse (`favicons.json`). Kirjanmerkkipalkki, kirjanmerkkisivu, aloitussivu ja palautetut välilehdet näyttävät oikean ikonin, eikä `/favicon.ico`-arvausta enää tarvita.
+- **Sisäsivut omiin välilehtiinsä**: kirjanmerkit, historia, lataukset ja asetukset (painikkeet sekä `Ctrl+H` / `Ctrl+J`) avautuvat uuteen välilehteen. Jo auki oleva sivu käytetään uudelleen.
+
+### 🔒 Tietoturva (Security)
+- Favicon-haku tavoittaa vain julkisia osoitteita: uudelleenohjaus tai DNS-huijaus ei voi ohjata hakua omaan verkkoon.
+
+---
+
 ## [0.4.3] - 2026-11-14
 
 ### 🔒 Tietoturva (Security)
