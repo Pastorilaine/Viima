@@ -33,10 +33,12 @@ Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset 
   - Lisää aktiivinen sivu kirjanmerkkeihin yhdellä klikkauksella (`★` tai `Ctrl+D`).
   - Tallennettujen kirjanmerkkien ja historian selaus, haku ja poisto selaimen sisäsivuilla.
   - Pysyvä tallennus käyttäjän AppData-hakemistoon (`%APPDATA%\IT-Veljekset\Viima\config\browser_data.json`).
-- **🏠 Moderni suomenkielinen aloitussivu (`browser://newtab`)**:
-  - Reaaliaikainen digitaalikello ja päivämäärä suomeksi.
-  - Vuorokaudenaikaan mukautuva tervehdys ja valittavat taustakuvat (Aurora, Glass Waves, Nordic Light).
-  - Tyylikäs pikahakukenttä ja pikalinkit suosituimmille sivustoille.
+- **🏠 Muokattava aloitussivu (`browser://newtab`)**:
+  - Koko ruudun widget-ruudukko: haku, kello, sää (Open-Meteo), pörssikurssit (Yahoo Finance) ja pikalinkit kirjanmerkeistä.
+  - "Muokkaa"-painikkeella widgettejä voi lisätä, poistaa, siirtää ja leventää. Kellon ulkoasu (digitaalinen/analoginen, fontti, koko, väri) on säädettävissä.
+  - Valittavat taustakuvat (Aurora, Glass Waves, Nordic Light).
+- **🖼️ Oikeat faviconit**: sivustojen ikonit haetaan ja tallennetaan välimuistiin, joten ne näkyvät välilehdissä, kirjanmerkeissä ja aloitussivulla myös uudelleenkäynnistyksen jälkeen.
+- **🗂️ Sisäsivut omissa välilehdissään**: kirjanmerkit, historia, lataukset ja asetukset avautuvat uuteen välilehteen (jo auki oleva käytetään uudelleen).
 - **📦 Windows-asennusohjelma ja automaattiset päivitykset**:
   - Käyttäjäkohtainen asennus kansioon `%LOCALAPPDATA%\IT-Veljekset\Viima` (`Viima-Setup.exe`, ei järjestelmänvalvojan oikeuksia, `--silent`-tuki, Käynnistä-valikon ja työpöydän pikakuvakkeet sekä Windowsin Sovellukset ja ominaisuudet -poistomerkintä).
   - GitHub Releases -pohjainen automaattinen päivitys (`latest.json` + SHA-256-varmennus ja automaattinen binäärin vaihto uudelleenkäynnistyksen yhteydessä).
@@ -52,7 +54,14 @@ Moderni, nopea ja tietoturvallinen suomalainen työpöytäselain **IT-Veljekset 
 | `Ctrl + L` | Aktivoi ja valitse osoiterivi |
 | `Ctrl + R` tai `F5` | Päivitä sivu |
 | `Ctrl + D` | Lisää tai poista nykyinen sivu kirjanmerkkeihin |
-| `Ctrl + H` | Avaa selaushistoria |
+| `Ctrl + H` | Avaa selaushistoria (uuteen välilehteen) |
+| `Ctrl + J` | Avaa lataukset (uuteen välilehteen) |
+| `Ctrl + F` | Hae sivulta |
+| `Ctrl + Shift + T` | Avaa viimeksi suljettu välilehti |
+| `Ctrl + Shift + N` | Uusi yksityinen ikkuna |
+| `Ctrl + Shift + B` | Näytä tai piilota kirjanmerkkipalkki |
+| `Ctrl + 1…9` | Siirry välilehteen |
+| `Ctrl + + / - / 0` | Zoomaa lähemmäs / kauemmas / palauta |
 | `Alt + Vasen` | Siirry taaksepäin historiassa |
 | `Alt + Oikea` | Siirry eteenpäin historiassa |
 
@@ -86,45 +95,49 @@ Asennusohjelma tukee myös hiljaista asennusta (`Viima-Setup.exe --silent`).
 
 ```text
 viima/
-├── Cargo.toml                  # Riippuvuudet (wry, tao, serde, sha2, ureq, windows)
-├── build.rs                    # Asennusohjelman upotetun binäärin kääntölinkitys
+├── Cargo.toml                  # Riippuvuudet (wry, tao, rusqlite, ureq, ed25519-dalek, windows)
+├── build.rs                    # Exe-ikoni ja asennusohjelman upotettu binääri
+├── .github/workflows/
+│   └── release.yml             # Tagista (v*) käännös, allekirjoitus ja GitHub Release
 ├── scripts/
-│   └── build_release.ps1       # Julkaisupaketin, asennusohjelman ja latest.json-luonti
-├── releases/
-│   ├── latest/                 # Uusin valmis julkaisu (Setup.exe, Exe, Zip, latest.json)
-│   ├── v0.3.0/                 # Versioitu julkaisukansio
-│   └── archive/                # Vanhemmat ZIP-julkaisut (v0.1.0 - v0.2.1)
+│   └── build_release.ps1       # Julkaisupaketin, asennusohjelman ja latest.json-luonti (CI käyttää tätä)
 ├── src/
-│   ├── main.rs                 # Sovelluksen sisääntulo ja CLI-päivitysliput
-│   ├── app.rs                  # Selaimen tilakoordinaattori, IPC-viestintä ja päivitykset
-│   ├── tab.rs                  # Välilehden elinkaari ja navigaatiohistoria
-│   ├── storage.rs              # Kirjanmerkkien, historian ja asetusten tallennus
-│   ├── adblock.rs              # Mainosestolistan ja skripti-injektion moottori
+│   ├── main.rs                 # Sovelluksen sisääntulo ja komentorivi
+│   ├── app/
+│   │   ├── mod.rs              # Selaimen tila ja tapahtumasilmukka
+│   │   ├── ipc.rs              # Käyttöliittymän ja sisäsivujen viestit, luottamusrajat
+│   │   ├── protocol.rs         # browser://-sisäsivujen tarjoilu ja CSP
+│   │   ├── tabs.rs             # Välilehtien luonti ja istunnon palautus
+│   │   ├── features.rs         # Valikot, zoom, lataukset, asetukset, yksityinen ikkuna
+│   │   └── remote.rs           # Faviconit ja widgetien (sää, kurssit) verkkohaut
+│   ├── tab.rs                  # Välilehden tila
+│   ├── storage.rs              # Kirjanmerkit, asetukset ja istunto (JSON)
+│   ├── history_db.rs           # Selaushistoria (SQLite)
+│   ├── favicon.rs              # Faviconien haku ja välimuisti (vain julkiset osoitteet)
+│   ├── widgets.rs              # Aloitussivun widgetien sallitut pyyntömallit
+│   ├── adblock.rs              # Mainos- ja seurantasuodatin
 │   ├── url_resolver.rs         # Osoitteiden ja hakukoneiden ratkaisija
-│   ├── updater.rs              # GitHub Releases -päivitystarkistus, SHA-256 ja --uninstall
-│   ├── win_platform.rs         # Windows-pikakuvakkeet, rekisteri ja WebView2-tarkistus
-│   └── bin/setup.rs            # Natiivi Windows-asennusohjelma (Viima-Setup.exe)
-├── assets/
-│   ├── branding/               # Viima-logo (.png, .ico, 64x64 .rgba)
-│   ├── ui/
-│   │   ├── index.html          # Yläpalkin käyttöliittymä
-│   │   ├── style.css           # Moderni tumma ja vaalea teema
-│   │   └── app.js              # UI:n reaktiivinen logiikka ja IPC
-│   └── internal/
-│       ├── newtab.html         # Aloitussivu (kello, haku, pikalinkit, taustakuvat)
-│       ├── history.html        # Selaushistorian hallinta
-│       ├── bookmarks.html      # Kirjanmerkkien hallinta
-│       ├── settings.html       # Selaimen asetukset ja päivitysten hallinta
-│       └── wallpapers/         # Aloitussivun taustakuvat
+│   ├── updater.rs, update_sig.rs  # Päivitykset ja allekirjoituksen tarkistus
+│   ├── webview_hooks.rs        # WebView2:n lataukset, evästeet ja äänet
+│   ├── win_platform.rs, win_shell.rs  # Windows-integraatio (rekisteri, valikot, pikakuvakkeet)
+│   ├── i18n.rs                 # Rust-puolen tekstit (fi/en)
+│   └── bin/
+│       ├── setup.rs            # Asennusohjelma (Viima-Setup.exe)
+│       └── sign.rs             # Päivityksen allekirjoitus (julkaisuputki)
+└── assets/
+    ├── branding/               # Logo ja kuvakkeet
+    ├── inject/                 # Sivuille ruiskutettavat skriptit (favicon, sivulta haku)
+    ├── i18n.js, favicons.js    # Sisäsivujen yhteiset skriptit
+    ├── ui/                     # Yläpalkki (index.html, style.css, app.js)
+    └── internal/               # newtab, history, bookmarks, downloads, settings, insecure + taustakuvat
 ```
-
 ---
 
 ## 🛡️ Tietoturva
 
 - **SmartScreen päällä**: Edgen phishing- ja haittaohjelmavaroitukset ovat käytössä.
 - **Moottori päivittyy itsestään**: verkkosivut ajetaan Edgen WebView2 Runtimessa, jonka Windows päivittää.
-- **Osoiterivi ei valehtele**: vain neljä sisäsivua näytetään `browser://`-nimellä, muut osoitteet näkyvät sellaisenaan. `http://`-sivut saavat punaisen varoituskuvakkeen.
+- **Osoiterivi ei valehtele**: vain Viiman omat sisäsivut näytetään `browser://`-nimellä, muut osoitteet näkyvät sellaisenaan. `http://`-sivut saavat punaisen varoituskuvakkeen.
 - **Sisäsivut suojattu**: web-sivu ei voi upottaa asetus- tai historiasivuja (clickjacking) eikä lähettää selaimelle muita komentoja kuin pikanäppäimiä.
 - **`window.open`/`target=_blank`** avaa vain `http(s)`-osoitteita, ei `file://`-osoitteita.
 - Kirjautumiset säilyvät uudelleenkäynnistyksen yli: `%LOCALAPPDATA%\IT-Veljekset\Viima\data\WebView2` (kuten Edgessä). Poista kansio, jos haluat kirjautua kaikkialta ulos.
@@ -133,3 +146,5 @@ viima/
 ## 🔒 Yksityisyys ja tietosuoja
 
 Viima ei lähetä telemetriaa tai selaustietoja kolmansille osapuolille. Kaikki selaushistoria ja kirjanmerkit säilytetään vain ja ainoastaan käyttäjän omalla laitteella.
+
+Aloitussivun widgetit tekevät pyyntöjä vain, kun ne ovat käytössä: sääwidget lähettää valitun paikkakunnan nimen ja koordinaatit Open-Meteolle, pörssiwidget kurssitunnukset Yahoo Financelle, ja faviconit haetaan sivustoilta itseltään (vain julkisista osoitteista). Poista widget aloitussivulta, jos et halua näitä pyyntöjä.

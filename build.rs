@@ -68,7 +68,6 @@ fn compile_windows_icon(out_dir: &Path) {
 
 fn main() {
     println!("cargo:rerun-if-env-changed=VIIMA_PAYLOAD");
-    println!("cargo:rerun-if-env-changed=OMA_SELAIN_PAYLOAD");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest = out_dir.join("payload_path.rs");
 
@@ -76,8 +75,7 @@ fn main() {
         compile_windows_icon(&out_dir);
     }
 
-    let payload_var = env::var("VIIMA_PAYLOAD").or_else(|_| env::var("OMA_SELAIN_PAYLOAD"));
-    if let Ok(payload) = payload_var
+    if let Ok(payload) = env::var("VIIMA_PAYLOAD")
         && !payload.trim().is_empty()
     {
         let abs = fs::canonicalize(&payload).expect("VIIMA_PAYLOAD path not found");

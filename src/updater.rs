@@ -9,7 +9,6 @@ pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn default_update_url() -> &'static str {
     option_env!("VIIMA_UPDATE_URL")
-        .or(option_env!("OMA_SELAIN_UPDATE_URL"))
         .unwrap_or("https://github.com/Pastorilaine/Viima/releases/latest/download/latest.json")
 }
 

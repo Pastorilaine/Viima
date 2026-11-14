@@ -181,7 +181,6 @@
 
         // New tab page
         'nt.page_title': 'New tab — Viima',
-        'nt.welcome': 'Welcome to Viima',
         'nt.search': 'Search the web or type an address...',
         'nt.footer': 'Viima v{v} • IT-Veljekset Group • Secure, fast and light',
         'nt.wallpaper': 'Wallpaper',

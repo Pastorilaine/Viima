@@ -49,7 +49,6 @@ try {
 
     Write-Host "[2/5] K${LowerAe}${LowerAe}nnet${LowerAe}${LowerAe}n Viima.exe (release)..." -ForegroundColor Yellow
     $env:VIIMA_PAYLOAD = ""
-    $env:OMA_SELAIN_PAYLOAD = ""
     cargo build --release --bin viima
     if ($LASTEXITCODE -ne 0) { throw "Selaimen release-k${LowerAe}${LowerAe}nn${LowerOe}s ep${LowerAe}onnistui." }
 
@@ -57,7 +56,6 @@ try {
 
     Write-Host "[3/5] K${LowerAe}${LowerAe}nnet${LowerAe}${LowerAe}n Viima-Setup.exe upotetulla selaimella..." -ForegroundColor Yellow
     $env:VIIMA_PAYLOAD = $BrowserExe
-    $env:OMA_SELAIN_PAYLOAD = $BrowserExe
     cargo build --release --bin viima_setup
     if ($LASTEXITCODE -ne 0) { throw "Asennusohjelman release-k${LowerAe}${LowerAe}nn${LowerOe}s ep${LowerAe}onnistui." }
 
@@ -69,7 +67,7 @@ try {
     $LatestDir = Join-Path $ReleasesDir "latest"
     $PortableStage = Join-Path $ReleasesDir "_portable_tmp"
 
-    Get-Process -Name "Viima*", "OmaSelain*" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$ReleasesDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name "Viima*" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$ReleasesDir*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 300
 
     foreach ($d in @($PortableStage, $VersionDir, $LatestDir)) {
@@ -143,6 +141,5 @@ VAATIMUKSET:
 }
 finally {
     Remove-Item Env:\VIIMA_PAYLOAD -ErrorAction SilentlyContinue
-    Remove-Item Env:\OMA_SELAIN_PAYLOAD -ErrorAction SilentlyContinue
     Pop-Location
 }
